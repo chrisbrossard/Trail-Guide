@@ -22,22 +22,22 @@ object LocationRepository {
     private val _subDeltaDistances = MutableSharedFlow<String>(replay = 1)
     val subDeltaDistances = _subDeltaDistances.asSharedFlow()
 
-    suspend fun emitLocation(location: Location) {
+    /*suspend fun emitLocation(location: Location) {
         _locationFlow.emit(location)
-    }
+    }*/
     private val _speedFlow = MutableSharedFlow<Float>(replay = 1)
     val speedFlow = _speedFlow.asSharedFlow()
 
     suspend fun emitDistance(distance: Int) {
         _distanceFlow.emit(distance)
     }
-    suspend fun emitAccuracy(accuracy: Int) {
+    /*suspend fun emitAccuracy(accuracy: Int) {
         _accuracyFlow.emit(accuracy)
-    }
+    }*/
 
-    suspend fun emitSpeed(speed: Float) {
+    /*suspend fun emitSpeed(speed: Float) {
         _speedFlow.emit(speed)
-    }
+    }*/
     suspend fun emitDeltaDistance(deltaDistance: Int) {
         _deltaDistanceFlow.emit(deltaDistance)
     }

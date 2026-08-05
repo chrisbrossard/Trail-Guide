@@ -10,51 +10,48 @@ import kotlinx.coroutines.flow.stateIn
 class LocationViewModel: ViewModel() {
     val location = mutableStateOf(Location(""))
     val hasLocation = mutableStateOf(false)
-    val locationState = LocationRepository.locationFlow
+    /*val locationState = LocationRepository.locationFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = Location("")
-        )
+        )*/
     val distanceState = LocationRepository.distanceFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = 0
         )
-    val accuracyState = LocationRepository.accuracyFlow
+    /*val accuracyState = LocationRepository.accuracyFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = 0
-        )
-    val speedState = LocationRepository.speedFlow
+        )*/
+    /*val speedState = LocationRepository.speedFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = 0
-        )
-    val deltaDistanceState = LocationRepository.deltaDistanceFlow
+        )*/
+    /*val deltaDistanceState = LocationRepository.deltaDistanceFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = 0
-        )
-    val updateCountState = LocationRepository.updateCount
+        )*/
+    /*val updateCountState = LocationRepository.updateCount
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = 0
-        )
-    val subDeltaDistances = LocationRepository.subDeltaDistances
+        )*/
+    /*val subDeltaDistances = LocationRepository.subDeltaDistances
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(10000),
             initialValue = ""
-        )
-    val startService = mutableStateOf(false)
-    val serviceStarted = mutableStateOf(false)
-
-    init {
-    }
+        )*/
+    //val startService = mutableStateOf(false)
+    //val serviceStarted = mutableStateOf(false)
 }

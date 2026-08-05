@@ -10,7 +10,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.hardware.SensorManager.PRESSURE_STANDARD_ATMOSPHERE
+//import android.hardware.SensorManager.PRESSURE_STANDARD_ATMOSPHERE
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -35,16 +35,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+//import androidx.compose.foundation.text.KeyboardOptions
+//import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+//import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+//import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -62,7 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.KeyboardType
+//import androidx.compose.ui.text.input.KeyboardType
 import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         deadlineViewModel,
                         locationViewModel,
                         distanceViewModel,
-                        fusedLocationProviderClient
+                        //fusedLocationProviderClient
                     )
                 }
             }
@@ -165,9 +165,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private val deadlineViewModel: DeadlineViewModel by viewModels()
     private val locationViewModel: LocationViewModel by viewModels()
     private val distanceViewModel: DistanceViewModel by viewModels()
-    private val sunsetViewModel: SunsetViewModel by viewModels()
-
-    val altitudeDistanceViewModel: AltitudeDistanceChartViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -223,7 +220,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             deadlineViewModel,
                             locationViewModel,
                             distanceViewModel,
-                            fusedLocationProviderClient
+                            //fusedLocationProviderClient
                         )
                     }
                 }
@@ -373,12 +370,12 @@ fun Greeting(
     myDeadlineViewModel: DeadlineViewModel,
     myLocationViewModel: LocationViewModel,
     myDistanceViewModel: DistanceViewModel,
-    myFusedLocationProviderClient: FusedLocationProviderClient,
+    //myFusedLocationProviderClient: FusedLocationProviderClient,
     myTimerViewModel: TimerViewModel = viewModel(),
     ) {
     val hikingTime by myTimerViewModel.time.collectAsStateWithLifecycle()
     //val seaLevelPressure = remember { mutableFloatStateOf(-1f) }
-    val alertShown = remember { mutableStateOf(false) }
+    //val alertShown = remember { mutableStateOf(false) }
     val pickerShown = remember { mutableStateOf(false) }
     val options = listOf("Sunset", "Deadline")
     var selectedOption by remember { mutableStateOf(options[0]) }
@@ -445,7 +442,7 @@ fun Greeting(
                     myLocationViewModel,
                     myDistanceViewModel,
                     myPressureViewModel,
-                    myFusedLocationProviderClient
+                    //myFusedLocationProviderClient
                 )
                 AltitudeDistanceChart()
             }
@@ -532,7 +529,7 @@ fun Greeting(
                         myLocationViewModel,
                         myDistanceViewModel,
                         myPressureViewModel,
-                        myFusedLocationProviderClient
+                        //myFusedLocationProviderClient
                     )
                     AltitudeDistanceChart()
                 }
@@ -560,7 +557,6 @@ fun HikingTime(
 @Composable
 fun Sunset(
     myLocationViewModel: LocationViewModel,
-    //mySunsetViewModel: SunsetViewModel,
     onTimeToSunsetChanged: (Int) -> Unit,
     nowEpochSeconds: Long
 ) {
@@ -579,7 +575,7 @@ fun Sunset(
         requestedSolarEvents = listOf(SolarEvent.Sunset),
         limit = 1.days
     )
-    var timeString = ""
+    var timeString: String
     //val nowEpochSeconds = Clock.System.now().epochSeconds
     if (nextSunset.none()) {
         timeString = "-"
@@ -760,10 +756,10 @@ fun TurnaroundTime(
         timeString = secondsToTimeOfDay(turnaroundSecondsFromStartOfDay)
         turnaroundSecondsFromNow =
             ((hikingTime + timeToSunset) / 2) - hikingTime
-        if (turnaroundSecondsFromNow < 0) {
-            timeString += " (now)"
+        timeString += if (turnaroundSecondsFromNow < 0) {
+            " (now)"
         } else {
-            timeString += " (" + secondsToHoursAndMinutes(turnaroundSecondsFromNow) + ")"
+            " (" + secondsToHoursAndMinutes(turnaroundSecondsFromNow) + ")"
         }
     } else if (myDeadlineViewModel.deadline.longValue != -1L) {
         turnaroundSecondsFromStartOfDay = (myTimerViewModel.startFromEpoch.longValue -
@@ -771,10 +767,10 @@ fun TurnaroundTime(
         turnaroundSecondsFromStartOfDay += (hikingTime + timeToDeadline) / 2
         timeString = secondsToTimeOfDay(turnaroundSecondsFromStartOfDay)
         turnaroundSecondsFromNow = (hikingTime + timeToDeadline) / 2 - hikingTime
-        if (turnaroundSecondsFromNow < 0) {
-            timeString += " (now)"
+        timeString += if (turnaroundSecondsFromNow < 0) {
+            " (now)"
         } else {
-            timeString += " (" + secondsToHoursAndMinutes(turnaroundSecondsFromNow) + ")"
+            " (" + secondsToHoursAndMinutes(turnaroundSecondsFromNow) + ")"
         }
     }
     Text(
@@ -787,7 +783,7 @@ fun TurnaroundTime(
     Spacer(modifier = Modifier.height(32.dp))
 }
 
-@Composable
+/*@Composable
 fun AltitudeChange(myPressureViewModel: PressureViewModel) {
     val startAltitude = SensorManager.getAltitude(
         PRESSURE_STANDARD_ATMOSPHERE,
@@ -819,9 +815,9 @@ fun AltitudeChange(myPressureViewModel: PressureViewModel) {
         text = "Altitude change"
     )
     Spacer(modifier = Modifier.height(32.dp))
-}
+}*/
 
-@Composable
+/*@Composable
 fun Altitude(
     myPressureViewModel: PressureViewModel,
     myLocationViewModel: LocationViewModel,
@@ -862,9 +858,9 @@ fun Altitude(
         text = "Altitude"
     )
     Spacer(modifier = Modifier.height(32.dp))
-}
+}*/
 
-@Composable
+/*@Composable
 fun AltitudeAlertDialog(
     myPressureViewModel: PressureViewModel,
     alertShown: Boolean,
@@ -926,7 +922,7 @@ fun AltitudeAlertDialog(
             }
         )
     }
-}
+}*/
 
 enum class OnOffState {
     OFF, STARTING, ON, STOPPING
@@ -938,15 +934,15 @@ fun Distance(
     myLocationViewModel: LocationViewModel,
     myDistanceViewModel: DistanceViewModel,
     myPressureViewModel: PressureViewModel,
-    myFusedLocationProviderClient: FusedLocationProviderClient
+    //myFusedLocationProviderClient: FusedLocationProviderClient
 ) {
-    val location by myLocationViewModel.locationState.collectAsStateWithLifecycle()
+    //val location by myLocationViewModel.locationState.collectAsStateWithLifecycle()
     val distance by myLocationViewModel.distanceState.collectAsStateWithLifecycle()
-    val accuracy by myLocationViewModel.accuracyState.collectAsStateWithLifecycle()
-    val speed by myLocationViewModel.speedState.collectAsStateWithLifecycle()
-    val updateCount by myLocationViewModel.updateCountState.collectAsStateWithLifecycle()
-    val deltaDistance by myLocationViewModel.deltaDistanceState.collectAsStateWithLifecycle()
-    val subDeltaDistances by myLocationViewModel.subDeltaDistances.collectAsStateWithLifecycle()
+    //val accuracy by myLocationViewModel.accuracyState.collectAsStateWithLifecycle()
+    //val speed by myLocationViewModel.speedState.collectAsStateWithLifecycle()
+    //val updateCount by myLocationViewModel.updateCountState.collectAsStateWithLifecycle()
+    //val deltaDistance by myLocationViewModel.deltaDistanceState.collectAsStateWithLifecycle()
+    //val subDeltaDistances by myLocationViewModel.subDeltaDistances.collectAsStateWithLifecycle()
     //val lifeCycleOwner = LocalLifecycleOwner.current
 
     // detect onStop call
@@ -966,7 +962,7 @@ fun Distance(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = distance.toString() + " m",
+            text = "$distance m",
                     //" " + subDeltaDistances +
                     //" " + deltaDistance.toString() +
                     //" " + accuracy.toString(),
@@ -977,15 +973,6 @@ fun Distance(
                 myDistanceViewModel.startChartActivity.value = true
             }
         )
-        /*if (myDistanceViewModel.startChartActivity.value) {
-            val intent = Intent(
-                LocalContext.current,
-                AltitudeChartActivity::class.java)
-                .apply {
-                }
-            LocalContext.current.startActivity(intent)
-            myDistanceViewModel.startChartActivity.value = false
-        }*/
         Spacer(modifier = Modifier.padding(6.dp))
         Button(
             onClick = {
@@ -1020,7 +1007,8 @@ fun Distance(
                 LocationService::class.java).apply {
                 action = "START"
             }
-            intent.putExtra("sea_level_pressure", myPressureViewModel.seaLevelPressure.value)
+            intent.putExtra("sea_level_pressure",
+                myPressureViewModel.seaLevelPressure.floatValue)
             LocalContext.current.startForegroundService(intent)
             myDistanceViewModel.buttonString.value = "Stop"
             myDistanceViewModel.distanceState.value = OnOffState.ON

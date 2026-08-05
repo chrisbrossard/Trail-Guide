@@ -38,7 +38,7 @@ class LocationService: Service(), SensorEventListener {
 
     private var lastLocation = Location("")
     private var distance = 0
-    private var accuracy = 0
+    //private var accuracy = 0
     data class ChartPoint(
         val distance: Int,
         val altitude: Int
@@ -61,7 +61,7 @@ class LocationService: Service(), SensorEventListener {
                     if (lastLocation.latitude != 0.0) {
                         var subDeltaDistance = lastLocation.distanceTo(location).toInt()
                         deltaDistance += subDeltaDistance
-                        distanceString += subDeltaDistance.toString() + " "
+                        distanceString += "$subDeltaDistance "
                     }
                     lastLocation = location
                 }
@@ -127,7 +127,7 @@ class LocationService: Service(), SensorEventListener {
                 val locationRequest = LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     10000).apply {
-                        setMaxUpdateDelayMillis(30 * 1000)
+                        setMaxUpdateDelayMillis(60 * 1000)
                 }.build()
 
                 locationClient.requestLocationUpdates(
