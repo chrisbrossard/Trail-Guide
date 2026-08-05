@@ -4,7 +4,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.lifecycle.ViewModel
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import com.google.android.gms.location.LocationCallback
 
 
