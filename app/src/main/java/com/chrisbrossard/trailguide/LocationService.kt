@@ -58,6 +58,7 @@ class LocationService: Service(), SensorEventListener {
                 var deltaDistance = 0
                 var distanceString = "* "
                 for (location in locations) {
+                    LocationRepository.emitLocation(location)
                     if (lastLocation.latitude != 0.0) {
                         var subDeltaDistance = lastLocation.distanceTo(location).toInt()
                         deltaDistance += subDeltaDistance
@@ -67,18 +68,11 @@ class LocationService: Service(), SensorEventListener {
                 }
                 distance += deltaDistance
                 LocationRepository.emitDistance(distance)
-                LocationRepository.emitDeltaDistance(deltaDistance)
-                LocationRepository.emitSubDeltaDistances(distanceString)
-                LocationRepository.emitUpdateCount(locations.size)
+                //LocationRepository.emitDeltaDistance(deltaDistance)
+                //LocationRepository.emitSubDeltaDistances(distanceString)
+                //LocationRepository.emitUpdateCount(locations.size)
 
                 val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
-                if (_trackingData.value.isEmpty()) {
-                    val zeroPoint = ChartPoint(
-                        0,
-                        a.toInt()
-                    )
-                    _trackingData.update { currentList -> currentList + zeroPoint}
-                }
                 val newPoint = ChartPoint(
                         distance, //+ (Math.random() * 10).toInt(),
                         a.toInt() //+ (Math.random() * 1000).toInt()
@@ -101,16 +95,18 @@ class LocationService: Service(), SensorEventListener {
 
         when (intent?.action) {
             "START" -> {
-                seaLevelPressure = intent.getFloatExtra("sea_level_pressure", -1f)
-
-                /*val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
+                seaLevelPressure = intent.getFloatExtra("sea_level_pressure",
+                    -1f)
+                currentPressure = intent.getFloatExtra("current_pressure",
+                    -1f)
+                val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
                 if (_trackingData.value.isEmpty()) {
                     val zeroPoint = ChartPoint(
                         0,
                         a.toInt()
                     )
                     _trackingData.update { currentList -> currentList + zeroPoint}
-                }*/
+                }
 
                 val channel = NotificationChannel(
                     "altitude_steps_channel",
@@ -127,7 +123,7 @@ class LocationService: Service(), SensorEventListener {
                 val locationRequest = LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     10000).apply {
-                        setMaxUpdateDelayMillis(60 * 1000)
+                        setMaxUpdateDelayMillis(30 * 1000)
                 }.build()
 
                 locationClient.requestLocationUpdates(

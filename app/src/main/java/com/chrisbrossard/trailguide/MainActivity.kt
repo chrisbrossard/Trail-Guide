@@ -1,5 +1,7 @@
 package com.chrisbrossard.trailguide
 
+import android.location.Location
+import androidx.compose.ui.graphics.Path
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
@@ -20,10 +22,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -52,6 +58,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,12 +66,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 //import androidx.compose.ui.text.input.KeyboardType
 import java.util.Locale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toIntSize
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -94,6 +106,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import org.maplibre.compose.map.MaplibreMap
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -388,40 +401,144 @@ fun Greeting(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                HikingTime(
-                    hikingTime
-                )
-                Sunset(
-                    myLocationViewModel,
-                    onTimeToSunsetChanged = { timeToSunset.intValue = it },
-                    Clock.System.now().epochSeconds
-                )
-                Deadline(
-                    myDeadlineViewModel,
-                    onPickerShownChanged = { pickerShown.value = it },
-                    onTimeToDeadlineChanged = { timeToDeadline.intValue = it },
-                    Clock.System.now().epochSeconds
-                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Row {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = secondsToHoursAndMinutes(hikingTime),
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "Hiking time"
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+                Row(
+                    modifier = Modifier.height(IntrinsicSize.Max)
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        val timeString = sunset(
+                            myLocationViewModel,
+                            onTimeToSunsetChanged = { timeToSunset.intValue = it }
+                        )
+                        Text(
+                            text = timeString,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "Time to sunset"
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        val timeString = deadline(
+                            myDeadlineViewModel,
+                            onTimeToDeadlineChanged = { timeToDeadline.intValue = it },
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = timeString,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    pickerShown.value = true
+                                },
+                            ) {
+                                Text(
+                                    text = "Set"
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Time to deadline"
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+
                 DeadlineTimePicker(
                     myDeadlineViewModel,
                     pickerShown.value,
                     onPickerShownChanged = { pickerShown.value = it },
                 )
-                TurnaroundTimeRadioButtonGroup(
-                    options,
-                    selectedOption,
-                    onTurnaroundTypeChanged = { selectedOption = it }
-                )
-                TurnaroundTime(
-                    myTimerViewModel,
-                    myDeadlineViewModel,
-                    selectedOption,
-                    hikingTime,
-                    timeToSunset.intValue,
-                    timeToDeadline.intValue
-                )
+                /*Row(
+                    modifier = Modifier.height(IntrinsicSize.Max)
+                ) {
+                    /*TurnaroundTimeRadioButtonGroup(
+                        options,
+                        selectedOption,
+                        onTurnaroundTypeChanged = { selectedOption = it }
+                    )*/
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .selectableGroup()
+                                .padding(4.dp)
+                        ) {
+                            options.forEach { option ->
+                                Row(
+                                    modifier = Modifier
+                                        .selectable(
+                                            selected = (option == selectedOption),
+                                            onClick = {
+                                                selectedOption = option
+                                            },
+                                            role = Role.RadioButton
+                                        ),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = (option == selectedOption),
+                                        onClick = null
+                                    )
+                                    Text(option)
+                                }
+                            }
+                        }
+                        Text("Turnaround based on")
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        val timeString = TurnaroundTime(
+                            myTimerViewModel,
+                            myDeadlineViewModel,
+                            selectedOption,
+                            hikingTime,
+                            timeToSunset.intValue,
+                            timeToDeadline.intValue
+                        )
+                        Text(
+                            text = timeString,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "Turnaround time"
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))*/
+
                 /*AltitudeChange(
                     myPressureViewModel
                 )
@@ -438,6 +555,17 @@ fun Greeting(
                     onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it},
                     onAlertShownChanged = { alertShown.value = it}
                 )*/
+                /*Canvas(
+                    modifier = Modifier
+                        .size(200.dp)
+                        .background(Color.Blue)
+                ){
+
+                }*/
+                TrackChart(
+                    myLocationViewModel
+                )
+                Spacer(modifier = Modifier.height(32.dp))
                 Distance(
                     myLocationViewModel,
                     myDistanceViewModel,
@@ -445,6 +573,8 @@ fun Greeting(
                     //myFusedLocationProviderClient
                 )
                 AltitudeDistanceChart()
+                //Spacer(modifier = Modifier.height(32.dp))
+                //MaplibreMap()
             }
         }
     } else { // landscape
@@ -461,26 +591,7 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    HikingTime(
-                        hikingTime
-                    )
-                    Sunset(
-                        myLocationViewModel,
-                        onTimeToSunsetChanged = { timeToSunset.intValue = it },
-                        Clock.System.now().epochSeconds
-                    )
-                    Deadline(
-                        myDeadlineViewModel,
-                        onPickerShownChanged = { pickerShown.value = it },
-                        onTimeToDeadlineChanged = { timeToDeadline.intValue = it },
-                        Clock.System.now().epochSeconds
 
-                    )
-                    DeadlineTimePicker(
-                        myDeadlineViewModel,
-                        pickerShown.value,
-                        onPickerShownChanged = { pickerShown.value = it}
-                    )
                 }
                 Column( // middle column
                     modifier = Modifier
@@ -490,19 +601,7 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    TurnaroundTimeRadioButtonGroup(
-                        options,
-                        selectedOption,
-                        onTurnaroundTypeChanged = { selectedOption = it }
-                    )
-                    TurnaroundTime(
-                        myTimerViewModel,
-                        myDeadlineViewModel,
-                        selectedOption,
-                        hikingTime,
-                        timeToSunset.intValue,
-                        timeToDeadline.intValue
-                    )
+
                 }
                 Column( // right column
                     modifier = Modifier
@@ -512,26 +611,7 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    /*AltitudeChange(
-                    myPressureViewModel
-                    )
-                    Altitude(
-                        myPressureViewModel,
-                        myLocationViewModel,
-                        onAlertShownChanged = { alertShown.value = it}
-                    )
-                    AltitudeAlertDialog(
-                        myPressureViewModel,
-                        alertShown.value,
-                        onAlertShownChanged = { alertShown.value = it}
-                    )*/
-                    Distance(
-                        myLocationViewModel,
-                        myDistanceViewModel,
-                        myPressureViewModel,
-                        //myFusedLocationProviderClient
-                    )
-                    AltitudeDistanceChart()
+
                 }
             }
         }
@@ -543,23 +623,26 @@ fun HikingTime(
     hikingTime: Int,
 ) {
     val timeString = secondsToHoursAndMinutes(hikingTime)
-    Text(
-        text = timeString,
-        style = MaterialTheme.typography.headlineSmall
-    )
-    Text(
-        text = "Hiking time"
-    )
-    Spacer(modifier = Modifier.height(32.dp))
+
+    Column {
+
+        Text(
+            text = timeString,
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = "Hiking time"
+        )
+    }
 }
 
 @OptIn(ExperimentalTime::class)
 @Composable
-fun Sunset(
+fun sunset(
     myLocationViewModel: LocationViewModel,
     onTimeToSunsetChanged: (Int) -> Unit,
-    nowEpochSeconds: Long
-) {
+    //nowEpochSeconds: Long
+): String {
     val zoneId = ZoneId.systemDefault()
     val today = LocalDate.now(zoneId)
     val epochSecondsAtStartOfDay =
@@ -576,7 +659,7 @@ fun Sunset(
         limit = 1.days
     )
     var timeString: String
-    //val nowEpochSeconds = Clock.System.now().epochSeconds
+    val nowEpochSeconds = Clock.System.now().epochSeconds
     if (nextSunset.none()) {
         timeString = "-"
     } else {
@@ -585,71 +668,41 @@ fun Sunset(
         if (nowEpochSeconds > sunsetEpochSeconds) {
             timeString = "-"
         } else {
-            val sunsetSecondsFromStartOfDay = (sunsetEpochSeconds -
+            /*val sunsetSecondsFromStartOfDay = (sunsetEpochSeconds -
                     epochSecondsAtStartOfDay).toInt()
-            timeString = secondsToTimeOfDay(sunsetSecondsFromStartOfDay)
+            timeString = secondsToTimeOfDay(sunsetSecondsFromStartOfDay)*/
             val timeToSunset = (sunsetEpochSeconds - nowEpochSeconds).toInt()
             onTimeToSunsetChanged(timeToSunset)
-            timeString += " (" + secondsToHoursAndMinutes(timeToSunset) + ")"
+            timeString = secondsToHoursAndMinutes(timeToSunset)
         }
     }
-    Text(
-        text = timeString,
-        style = MaterialTheme.typography.headlineSmall
-    )
-    Text(
-        text = "Sunset time"
-    )
-    Spacer(modifier = Modifier.height(24.dp))
+    return timeString
+    //Spacer(modifier = Modifier.height(24.dp))
 }
 
 @OptIn(ExperimentalTime::class)
 @Composable
-fun Deadline(
+fun deadline(
     myDeadlineViewModel: DeadlineViewModel,
-    onPickerShownChanged: (Boolean) -> Unit,
     onTimeToDeadlineChanged: (Int) -> Unit,
-    nowEpochSeconds: Long
-) {
-
+): String {
     val zoneId = ZoneId.systemDefault()
     val today = LocalDate.now(zoneId)
     val epochSecondsAtStartOfDay =
         today.atStartOfDay(zoneId).toEpochSecond()
+    val nowEpochSeconds = Clock.System.now().epochSeconds
 
     var timeString = "-"
     if (myDeadlineViewModel.deadline.longValue != -1L) {
-        val deadlineSecondsFromStartOfDay = (myDeadlineViewModel.deadline.longValue -
+        /*val deadlineSecondsFromStartOfDay = (myDeadlineViewModel.deadline.longValue -
                 epochSecondsAtStartOfDay).toInt()
-        timeString = secondsToTimeOfDay(deadlineSecondsFromStartOfDay)
+        timeString = secondsToTimeOfDay(deadlineSecondsFromStartOfDay*/
         val timeToDeadline = (myDeadlineViewModel.deadline.longValue -
                 nowEpochSeconds).toInt()
         onTimeToDeadlineChanged(timeToDeadline)
-        timeString += " (" + secondsToHoursAndMinutes(timeToDeadline) + ")"
+        timeString = secondsToHoursAndMinutes(timeToDeadline)
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = timeString,
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Button(
-            onClick = {
-                onPickerShownChanged(true)
-                //pickerShown.value = true
-            },
-        ) {
-            Text(
-                text = "Set"
-            )
-        }
-    }
-    Text(
-        text = "Deadline"
-    )
-    Spacer(modifier = Modifier.height(32.dp))
+    return timeString
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -740,7 +793,7 @@ fun TurnaroundTime(
     hikingTime: Int,
     timeToSunset: Int,
     timeToDeadline: Int
-) {
+): String {
     val zoneId = ZoneId.systemDefault()
     val today = LocalDate.now(zoneId)
     val epochSecondsAtStartOfDay =
@@ -773,14 +826,7 @@ fun TurnaroundTime(
             " (" + secondsToHoursAndMinutes(turnaroundSecondsFromNow) + ")"
         }
     }
-    Text(
-        text = timeString,
-        style = MaterialTheme.typography.headlineSmall
-    )
-    Text(
-        text = "Turnaround time"
-    )
-    Spacer(modifier = Modifier.height(32.dp))
+    return timeString
 }
 
 /*@Composable
@@ -1009,6 +1055,8 @@ fun Distance(
             }
             intent.putExtra("sea_level_pressure",
                 myPressureViewModel.seaLevelPressure.floatValue)
+            intent.putExtra("current_pressure",
+                myPressureViewModel.currentPressure.floatValue)
             LocalContext.current.startForegroundService(intent)
             myDistanceViewModel.buttonString.value = "Stop"
             myDistanceViewModel.distanceState.value = OnOffState.ON
@@ -1024,6 +1072,95 @@ fun Distance(
             LocalContext.current.stopService(intent)
             myDistanceViewModel.buttonString.value = "Start"
             myDistanceViewModel.distanceState.value = OnOffState.OFF
+        }
+    }
+}
+
+@Composable
+fun TrackChart(
+    locationViewModel: LocationViewModel
+) {
+    val location by locationViewModel.locationState.collectAsStateWithLifecycle()
+    val locationHistory = remember { mutableStateListOf<Location>() }
+
+    LaunchedEffect(location) {
+        if (location.latitude != 0.0) {
+            //if (location.provider.isNotEmpty()) { // Avoid adding the initial empty value
+            locationHistory.add(location)
+            //}
+        }
+    }
+
+    if (locationHistory.isEmpty() || locationHistory.size == 1) {
+        return
+    }
+    val minimumLatitude = locationHistory.minOf { it.latitude}
+    val maximumLatitude = locationHistory.maxOf { it.latitude }
+    val minimumLongitude = locationHistory.minOf { it.longitude }
+    val maximumLongitude = locationHistory.maxOf { it.longitude }
+
+    val latitudeRange = maximumLatitude - minimumLatitude
+    val longitudeRange = maximumLongitude - minimumLongitude
+
+    Canvas(
+        modifier = Modifier.size(200.dp).background(Color.LightGray)
+    ) {
+        var path = Path()
+        path.moveTo(0f, 0f)
+        path.lineTo(size.width, 0f)
+        path.lineTo(size.width, size.height)
+        path.lineTo(0f, size.height)
+        path.close()
+        drawPath(
+            path = path,
+            color = Color.Black,
+            style = Stroke(width = 1.dp.toPx())
+        )
+        path = Path()
+        //var dx = 0f
+        //var dy = 0f
+        //path.moveTo(size.width / 2f, size.height / 2f
+        if (locationHistory.size > 1) {
+            //if (latitudeRange != 0.0 && longitudeRange != 0.0) {
+            for ((index, location) in locationHistory.withIndex()) {
+                //location.latitude += Math.random() * 0.00009
+                //location.longitude += Math.random() * 0.00009
+                if (location.latitude != 0.0) {
+                    val range = maxOf(latitudeRange, longitudeRange)
+                    //val range = if (longitudeRange > latitudeRange) longitudeRange else latitudeRange
+                    var latitudeFraction: Double
+                    if (range != 0.0) {
+                        latitudeFraction = (location.latitude - minimumLatitude) / range
+                    } else {
+                        latitudeFraction = 0.5
+                    }
+                    var longitudeFraction: Double
+                    if (range != 0.0) {
+                        longitudeFraction = (location.longitude - minimumLongitude) / range
+                    } else {
+                        longitudeFraction = 0.5
+                    }
+                    var x = longitudeFraction * size.width
+                    val deltaX = longitudeRange / range * size.width
+                    val offsetX = size.width / 2 - deltaX / 2
+                    x += offsetX
+                    var y = (1.0 - latitudeFraction) * size.height
+                    val deltaY = latitudeRange / range * size.height
+                    val offsetY = size.height / 2 - deltaY / 2
+                    y -= offsetY
+                    if (index == 0) {
+                        path.moveTo(x.toFloat(), y.toFloat())
+                    } else {
+                        path.lineTo(x.toFloat(), y.toFloat())
+                    }
+                }
+            }
+            //path.close()
+            drawPath(
+                path = path,
+                color = Color.Red,
+                style = Stroke(width = 2.dp.toPx())
+            )
         }
     }
 }
