@@ -12,7 +12,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-//import android.hardware.SensorManager.PRESSURE_STANDARD_ATMOSPHERE
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -39,18 +38,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-//import androidx.compose.foundation.text.KeyboardOptions
-//import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-//import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-//import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -58,25 +50,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-//import androidx.compose.ui.text.input.KeyboardType
-import java.util.Locale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toIntSize
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -106,7 +89,6 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import org.maplibre.compose.map.MaplibreMap
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -390,10 +372,11 @@ fun Greeting(
     //val seaLevelPressure = remember { mutableFloatStateOf(-1f) }
     //val alertShown = remember { mutableStateOf(false) }
     val pickerShown = remember { mutableStateOf(false) }
-    val options = listOf("Sunset", "Deadline")
-    var selectedOption by remember { mutableStateOf(options[0]) }
+    //val options = listOf("Sunset", "Deadline")
+    //var selectedOption by remember { mutableStateOf(options[0]) }
     val timeToSunset = remember { mutableIntStateOf(0) }
     val timeToDeadline = remember { mutableIntStateOf((0)) }
+    val locations by myLocationViewModel.locationsState.collectAsStateWithLifecycle()
 
     if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
         Box(
@@ -476,94 +459,10 @@ fun Greeting(
                     pickerShown.value,
                     onPickerShownChanged = { pickerShown.value = it },
                 )
-                /*Row(
-                    modifier = Modifier.height(IntrinsicSize.Max)
-                ) {
-                    /*TurnaroundTimeRadioButtonGroup(
-                        options,
-                        selectedOption,
-                        onTurnaroundTypeChanged = { selectedOption = it }
-                    )*/
-                    Column(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .selectableGroup()
-                                .padding(4.dp)
-                        ) {
-                            options.forEach { option ->
-                                Row(
-                                    modifier = Modifier
-                                        .selectable(
-                                            selected = (option == selectedOption),
-                                            onClick = {
-                                                selectedOption = option
-                                            },
-                                            role = Role.RadioButton
-                                        ),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = (option == selectedOption),
-                                        onClick = null
-                                    )
-                                    Text(option)
-                                }
-                            }
-                        }
-                        Text("Turnaround based on")
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        val timeString = TurnaroundTime(
-                            myTimerViewModel,
-                            myDeadlineViewModel,
-                            selectedOption,
-                            hikingTime,
-                            timeToSunset.intValue,
-                            timeToDeadline.intValue
-                        )
-                        Text(
-                            text = timeString,
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        Text(
-                            text = "Turnaround time"
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))*/
 
-                /*AltitudeChange(
-                    myPressureViewModel
-                )
-                Altitude(
-                    myPressureViewModel,
-                    myLocationViewModel,
-                    seaLevelPressure.floatValue,
-                    onAlertShownChanged = { alertShown.value = it} ,
-                    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it }
-                )
-                AltitudeAlertDialog(
-                    myPressureViewModel,
-                    alertShown.value,
-                    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it},
-                    onAlertShownChanged = { alertShown.value = it}
-                )*/
-                /*Canvas(
-                    modifier = Modifier
-                        .size(200.dp)
-                        .background(Color.Blue)
-                ){
-
-                }*/
                 TrackChart(
-                    myLocationViewModel
+                    myLocationViewModel,
+                    locations
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 Distance(
@@ -591,7 +490,51 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-
+                    Text(
+                        text = secondsToHoursAndMinutes(hikingTime),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = "Hiking time"
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    var timeString = sunset(
+                        myLocationViewModel,
+                        onTimeToSunsetChanged = { timeToSunset.intValue = it }
+                    )
+                    Text(
+                        text = timeString,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = "Time to sunset"
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    timeString = deadline(
+                        myDeadlineViewModel,
+                        onTimeToDeadlineChanged = { timeToDeadline.intValue = it },
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = timeString,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                pickerShown.value = true
+                            },
+                        ) {
+                            Text(
+                                text = "Set"
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Time to deadline"
+                    )
                 }
                 Column( // middle column
                     modifier = Modifier
@@ -601,7 +544,10 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-
+                    TrackChart(
+                        myLocationViewModel,
+                        locations
+                    )
                 }
                 Column( // right column
                     modifier = Modifier
@@ -611,14 +557,20 @@ fun Greeting(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-
+                    Distance(
+                        myLocationViewModel,
+                        myDistanceViewModel,
+                        myPressureViewModel,
+                        //myFusedLocationProviderClient
+                    )
+                    AltitudeDistanceChart()
                 }
             }
         }
     }
 }
 
-@Composable
+/*@Composable
 fun HikingTime(
     hikingTime: Int,
 ) {
@@ -634,7 +586,7 @@ fun HikingTime(
             text = "Hiking time"
         )
     }
-}
+}*/
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -686,10 +638,10 @@ fun deadline(
     myDeadlineViewModel: DeadlineViewModel,
     onTimeToDeadlineChanged: (Int) -> Unit,
 ): String {
-    val zoneId = ZoneId.systemDefault()
-    val today = LocalDate.now(zoneId)
-    val epochSecondsAtStartOfDay =
-        today.atStartOfDay(zoneId).toEpochSecond()
+    //val zoneId = ZoneId.systemDefault()
+    //val today = LocalDate.now(zoneId)
+    //val epochSecondsAtStartOfDay =
+    //    today.atStartOfDay(zoneId).toEpochSecond()
     val nowEpochSeconds = Clock.System.now().epochSeconds
 
     var timeString = "-"
@@ -749,7 +701,7 @@ fun DeadlineTimePicker(
     }
 }
 
-@Composable
+/*@Composable
 fun TurnaroundTimeRadioButtonGroup(
     options: List<String>,
     selectedOption: String,
@@ -782,9 +734,9 @@ fun TurnaroundTimeRadioButtonGroup(
     }
     Text("Turnaround based on")
     Spacer(modifier = Modifier.height(32.dp))
-}
+}*/
 
-@Composable
+/*@Composable
 fun TurnaroundTime(
     myTimerViewModel: TimerViewModel,
     myDeadlineViewModel: DeadlineViewModel,
@@ -827,7 +779,7 @@ fun TurnaroundTime(
         }
     }
     return timeString
-}
+}*/
 
 /*@Composable
 fun AltitudeChange(myPressureViewModel: PressureViewModel) {
@@ -1078,32 +1030,28 @@ fun Distance(
 
 @Composable
 fun TrackChart(
-    locationViewModel: LocationViewModel
+    locationViewModel: LocationViewModel,
+    locations: List<Location>
 ) {
-    val location by locationViewModel.locationState.collectAsStateWithLifecycle()
-    val locationHistory = remember { mutableStateListOf<Location>() }
+    //val location by locationViewModel.locationState.collectAsStateWithLifecycle()
+    //val locationHistory = remember { mutableStateListOf<Location>() }
 
-    LaunchedEffect(location) {
-        if (location.latitude != 0.0) {
-            //if (location.provider.isNotEmpty()) { // Avoid adding the initial empty value
-            locationHistory.add(location)
-            //}
+    LaunchedEffect(locations) {
+        for (location in locations) {
+            if (location.latitude != 0.0) {
+                //if (location.provider.isNotEmpty()) { // Avoid adding the initial empty value
+                locationViewModel.locationHistory.add(location)
+                //}
+            }
         }
     }
 
-    if (locationHistory.isEmpty() || locationHistory.size == 1) {
+    /*if (locationViewModel.locationHistory.isEmpty() || locationViewModel.locationHistory.size == 1) {
         return
-    }
-    val minimumLatitude = locationHistory.minOf { it.latitude}
-    val maximumLatitude = locationHistory.maxOf { it.latitude }
-    val minimumLongitude = locationHistory.minOf { it.longitude }
-    val maximumLongitude = locationHistory.maxOf { it.longitude }
-
-    val latitudeRange = maximumLatitude - minimumLatitude
-    val longitudeRange = maximumLongitude - minimumLongitude
+    }*/
 
     Canvas(
-        modifier = Modifier.size(200.dp).background(Color.LightGray)
+        modifier = Modifier.size(200.dp).background(Color.White)
     ) {
         var path = Path()
         path.moveTo(0f, 0f)
@@ -1120,25 +1068,32 @@ fun TrackChart(
         //var dx = 0f
         //var dy = 0f
         //path.moveTo(size.width / 2f, size.height / 2f
-        if (locationHistory.size > 1) {
+        if (locationViewModel.locationHistory.isNotEmpty() && locationViewModel.locationHistory.size > 1) {
+
+            val minimumLatitude = locationViewModel.locationHistory.minOf { it.latitude}
+            val maximumLatitude = locationViewModel.locationHistory.maxOf { it.latitude }
+            val minimumLongitude = locationViewModel.locationHistory.minOf { it.longitude }
+            val maximumLongitude = locationViewModel.locationHistory.maxOf { it.longitude }
+
+            val latitudeRange = maximumLatitude - minimumLatitude
+            val longitudeRange = maximumLongitude - minimumLongitude
+
             //if (latitudeRange != 0.0 && longitudeRange != 0.0) {
-            for ((index, location) in locationHistory.withIndex()) {
+            for ((index, location) in locationViewModel.locationHistory.withIndex()) {
                 //location.latitude += Math.random() * 0.00009
                 //location.longitude += Math.random() * 0.00009
                 if (location.latitude != 0.0) {
                     val range = maxOf(latitudeRange, longitudeRange)
                     //val range = if (longitudeRange > latitudeRange) longitudeRange else latitudeRange
-                    var latitudeFraction: Double
-                    if (range != 0.0) {
-                        latitudeFraction = (location.latitude - minimumLatitude) / range
+                    val latitudeFraction: Double = if (range != 0.0) {
+                        (location.latitude - minimumLatitude) / range
                     } else {
-                        latitudeFraction = 0.5
+                        0.5
                     }
-                    var longitudeFraction: Double
-                    if (range != 0.0) {
-                        longitudeFraction = (location.longitude - minimumLongitude) / range
+                    val longitudeFraction: Double = if (range != 0.0) {
+                        (location.longitude - minimumLongitude) / range
                     } else {
-                        longitudeFraction = 0.5
+                        0.5
                     }
                     var x = longitudeFraction * size.width
                     val deltaX = longitudeRange / range * size.width
@@ -1224,11 +1179,11 @@ fun AltitudeDistanceChart(
     }
 }
 
-fun secondsToTimeOfDay(seconds: Int): String {
+/*fun secondsToTimeOfDay(seconds: Int): String {
     var timeString = String.format(Locale.US, "%02d", (seconds / 3600)) + ":"
     timeString += String.format(Locale.US, "%02d", ((seconds % 3600) / 60))
     return timeString
-}
+}*/
 
 fun secondsToHoursAndMinutes(seconds: Int): String {
     var timeString = (seconds / 3600).toString() + " h "
@@ -1240,4 +1195,92 @@ fun secondsToHoursAndMinutes(seconds: Int): String {
     var timeString = ((seconds % 3600) / 60).toString() + "m "
     timeString += (seconds % 60).toString() + "s"
     return timeString
+}*/
+
+
+/*Row(
+    modifier = Modifier.height(IntrinsicSize.Max)
+) {
+    /*TurnaroundTimeRadioButtonGroup(
+        options,
+        selectedOption,
+        onTurnaroundTypeChanged = { selectedOption = it }
+    )*/
+    Column(
+        modifier = Modifier.weight(1f).fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Column(
+            modifier = Modifier
+                .selectableGroup()
+                .padding(4.dp)
+        ) {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .selectable(
+                            selected = (option == selectedOption),
+                            onClick = {
+                                selectedOption = option
+                            },
+                            role = Role.RadioButton
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (option == selectedOption),
+                        onClick = null
+                    )
+                    Text(option)
+                }
+            }
+        }
+        Text("Turnaround based on")
+    }
+    Column(
+        modifier = Modifier.weight(1f).fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        val timeString = TurnaroundTime(
+            myTimerViewModel,
+            myDeadlineViewModel,
+            selectedOption,
+            hikingTime,
+            timeToSunset.intValue,
+            timeToDeadline.intValue
+        )
+        Text(
+            text = timeString,
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = "Turnaround time"
+        )
+    }
+}
+Spacer(modifier = Modifier.height(32.dp))*/
+
+/*AltitudeChange(
+    myPressureViewModel
+)
+Altitude(
+    myPressureViewModel,
+    myLocationViewModel,
+    seaLevelPressure.floatValue,
+    onAlertShownChanged = { alertShown.value = it} ,
+    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it }
+)
+AltitudeAlertDialog(
+    myPressureViewModel,
+    alertShown.value,
+    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it},
+    onAlertShownChanged = { alertShown.value = it}
+)*/
+/*Canvas(
+    modifier = Modifier
+        .size(200.dp)
+        .background(Color.Blue)
+){
+
 }*/

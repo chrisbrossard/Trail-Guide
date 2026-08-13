@@ -58,7 +58,7 @@ class LocationService: Service(), SensorEventListener {
                 var deltaDistance = 0
                 var distanceString = "* "
                 for (location in locations) {
-                    LocationRepository.emitLocation(location)
+                    //LocationRepository.emitLocation(location)
                     if (lastLocation.latitude != 0.0) {
                         var subDeltaDistance = lastLocation.distanceTo(location).toInt()
                         deltaDistance += subDeltaDistance
@@ -67,6 +67,7 @@ class LocationService: Service(), SensorEventListener {
                     lastLocation = location
                 }
                 distance += deltaDistance
+                LocationRepository.emitLocations(locations)
                 LocationRepository.emitDistance(distance)
                 //LocationRepository.emitDeltaDistance(deltaDistance)
                 //LocationRepository.emitSubDeltaDistances(distanceString)

@@ -8,6 +8,9 @@ object LocationRepository {
     private val _locationFlow = MutableSharedFlow<Location>(replay = 1)
     val locationFlow = _locationFlow.asSharedFlow()
 
+    private val _locationsFlow = MutableSharedFlow<List<Location>>(replay = 1)
+    val locationsFlow = _locationsFlow.asSharedFlow()
+
     private val _distanceFlow = MutableSharedFlow<Int>(replay = 1)
     val distanceFlow = _distanceFlow.asSharedFlow()
     private val _deltaDistanceFlow = MutableSharedFlow<Int>(replay = 1)
@@ -22,11 +25,16 @@ object LocationRepository {
     private val _subDeltaDistances = MutableSharedFlow<String>(replay = 1)
     val subDeltaDistances = _subDeltaDistances.asSharedFlow()
 
+    private val _speedFlow = MutableSharedFlow<Float>(replay = 1)
+    val speedFlow = _speedFlow.asSharedFlow()
+
     suspend fun emitLocation(location: Location) {
         _locationFlow.emit(location)
     }
-    private val _speedFlow = MutableSharedFlow<Float>(replay = 1)
-    val speedFlow = _speedFlow.asSharedFlow()
+
+    suspend fun emitLocations(locations: List<Location>) {
+        _locationsFlow.emit(locations)
+    }
 
     suspend fun emitDistance(distance: Int) {
         _distanceFlow.emit(distance)
