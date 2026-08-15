@@ -1200,7 +1200,7 @@ fun AltitudeDistanceChart(
                     titleComponent = axisTitleComponent
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
-                    title = { "Time (m)" },
+                    title = { "Distance (m)" },
                     titleComponent = axisTitleComponent,
                     valueFormatter = { _, value, _ -> "${value.toInt()}" }
                 ),

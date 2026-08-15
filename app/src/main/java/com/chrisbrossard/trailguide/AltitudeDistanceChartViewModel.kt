@@ -17,7 +17,7 @@ class AltitudeDistanceChartViewModel: ViewModel() {
                     modelProducer.runTransaction {
                         lineModel {
                             series(
-                                x = points.map { String.format(Locale.US, "%.2f", it.time).toFloat() }, //distance },
+                                x = points.map { String.format(Locale.US, "%.2f", it.distance).toFloat() },
                                 y = points.map { String.format(Locale.US, "%.2f", it.altitude).toFloat() }
                             )
                         }

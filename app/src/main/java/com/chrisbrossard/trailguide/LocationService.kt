@@ -51,12 +51,12 @@ class LocationService: Service(), SensorEventListener {
     val client: FusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(this)
     }
-    private var distance = 0
+    private var distance = 0f
     //private var accuracy = 0
     private var startTime = 0L
     data class ChartPoint(
         //val distance: Int,
-        val time: Float,
+        val distance: Float, //time: Float,
         val altitude: Float
     )
     companion object {
@@ -85,14 +85,14 @@ class LocationService: Service(), SensorEventListener {
                 }
                 distance += deltaDistance
                 LocationRepository.emitLocations(locations)
-                LocationRepository.emitDistance(distance)
+                LocationRepository.emitDistance(distance.toInt())
                 //LocationRepository.emitDeltaDistance(deltaDistance)
                 //LocationRepository.emitSubDeltaDistances(distanceString)
                 //LocationRepository.emitUpdateCount(locations.size)
 
                 val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
                 val newPoint = ChartPoint(
-                    (Clock.System.now().epochSeconds - startTime).toFloat(),
+                    distance, //(Clock.System.now().epochSeconds - startTime).toFloat(),
                         a
                     )
                 _trackingData.update { currentList -> currentList + newPoint}
