@@ -16,6 +16,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import com.google.android.gms.location.Priority
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +57,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -88,6 +93,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 
 class MainActivity : ComponentActivity(), SensorEventListener {
@@ -377,6 +383,7 @@ fun Greeting(
     val timeToSunset = remember { mutableIntStateOf(0) }
     val timeToDeadline = remember { mutableIntStateOf((0)) }
     val locations by myLocationViewModel.locationsState.collectAsStateWithLifecycle()
+    val location by myLocationViewModel.locationState.collectAsStateWithLifecycle()
 
     if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
         Box(
@@ -462,7 +469,7 @@ fun Greeting(
 
                 TrackChart(
                     myLocationViewModel,
-                    locations
+                    location
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 Distance(
@@ -546,7 +553,7 @@ fun Greeting(
                 ) {
                     TrackChart(
                         myLocationViewModel,
-                        locations
+                        location
                     )
                 }
                 Column( // right column
@@ -1031,27 +1038,34 @@ fun Distance(
 @Composable
 fun TrackChart(
     locationViewModel: LocationViewModel,
-    locations: List<Location>
+    //locations: List<Location>
+    location: Location
 ) {
     //val location by locationViewModel.locationState.collectAsStateWithLifecycle()
     //val locationHistory = remember { mutableStateListOf<Location>() }
 
-    LaunchedEffect(locations) {
-        for (location in locations) {
+    /*LaunchedEffect(location) {
+        //for (location in locations) {
             if (location.latitude != 0.0) {
                 //if (location.provider.isNotEmpty()) { // Avoid adding the initial empty value
                 locationViewModel.locationHistory.add(location)
                 //}
             }
-        }
-    }
+        //}
+        Log.d(
+            "GPS",
+            "history size = ${locationViewModel.locationHistory.size}, " +
+                    "lat=${location.latitude}, lon=${location.longitude}, " +
+                    "time=${location.time}"
+        )
+    }*/
 
     /*if (locationViewModel.locationHistory.isEmpty() || locationViewModel.locationHistory.size == 1) {
         return
     }*/
 
     Canvas(
-        modifier = Modifier.size(200.dp).background(Color.White)
+        modifier = Modifier.size(200.dp).background(Color.Transparent)
     ) {
         var path = Path()
         path.moveTo(0f, 0f)
@@ -1080,8 +1094,6 @@ fun TrackChart(
 
             //if (latitudeRange != 0.0 && longitudeRange != 0.0) {
             for ((index, location) in locationViewModel.locationHistory.withIndex()) {
-                //location.latitude += Math.random() * 0.00009
-                //location.longitude += Math.random() * 0.00009
                 if (location.latitude != 0.0) {
                     val range = maxOf(latitudeRange, longitudeRange)
                     //val range = if (longitudeRange > latitudeRange) longitudeRange else latitudeRange
@@ -1105,8 +1117,18 @@ fun TrackChart(
                     y -= offsetY
                     if (index == 0) {
                         path.moveTo(x.toFloat(), y.toFloat())
+                        /*drawCircle(
+                            center = Offset(x.toFloat(), y = y.toFloat()),
+                            radius = 6f,
+                            color = Color.Red,
+                            style = Stroke(width = 2f))*/
                     } else {
                         path.lineTo(x.toFloat(), y.toFloat())
+                        /*drawCircle(
+                            center = Offset(x.toFloat(), y = y.toFloat()),
+                            radius = 6f,
+                            color = Color.Red,
+                            style = Stroke(width = 2f))*/
                     }
                 }
             }
@@ -1160,7 +1182,16 @@ fun AltitudeDistanceChart(
                                 )
                             ),
                             interpolator = LineCartesianLayer.Interpolator
-                                .cubic(curvature = 0.38f)
+                                .cubic(curvature = 0.38f),
+                            /*fixpointProvider = LineCartesianLayer.PointProvider.single(
+                                point = LineCartesianLayer.Point(
+                                    component = rememberShapeComponent(
+                                        fill = Fill(Color.Red),
+                                        shape = CircleShape
+                                    ),
+                                    size = 10.dp
+                                )
+                            )*/
                         )
                     )
                 ),
@@ -1169,7 +1200,7 @@ fun AltitudeDistanceChart(
                     titleComponent = axisTitleComponent
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
-                    title = { "Distance (m)" },
+                    title = { "Time (m)" },
                     titleComponent = axisTitleComponent,
                     valueFormatter = { _, value, _ -> "${value.toInt()}" }
                 ),

@@ -8,6 +8,10 @@ object LocationRepository {
     private val _locationFlow = MutableSharedFlow<Location>(replay = 1)
     val locationFlow = _locationFlow.asSharedFlow()
 
+    private val _locationHistory = mutableListOf<Location>()
+    val locationHistory: List<Location>
+        get() = _locationHistory
+
     private val _locationsFlow = MutableSharedFlow<List<Location>>(replay = 1)
     val locationsFlow = _locationsFlow.asSharedFlow()
 
@@ -29,10 +33,14 @@ object LocationRepository {
     val speedFlow = _speedFlow.asSharedFlow()
 
     suspend fun emitLocation(location: Location) {
+        _locationHistory.add(location)
         _locationFlow.emit(location)
     }
 
     suspend fun emitLocations(locations: List<Location>) {
+        for (location in locations) {
+            _locationHistory.add(location)
+        }
         _locationsFlow.emit(locations)
     }
 

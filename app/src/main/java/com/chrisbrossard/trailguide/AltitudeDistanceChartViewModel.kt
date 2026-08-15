@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class AltitudeDistanceChartViewModel: ViewModel() {
     val modelProducer = CartesianChartModelProducer()
@@ -16,8 +17,8 @@ class AltitudeDistanceChartViewModel: ViewModel() {
                     modelProducer.runTransaction {
                         lineModel {
                             series(
-                                x = points.map { it.distance },
-                                y = points.map { it.altitude }
+                                x = points.map { String.format(Locale.US, "%.2f", it.time).toFloat() }, //distance },
+                                y = points.map { String.format(Locale.US, "%.2f", it.altitude).toFloat() }
                             )
                         }
                     }

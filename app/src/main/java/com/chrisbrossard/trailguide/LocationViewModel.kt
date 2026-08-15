@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 
 class LocationViewModel: ViewModel() {
     val location = mutableStateOf(Location(""))
-    val locationHistory = mutableStateListOf<Location>()
+    val locationHistory = LocationRepository.locationHistory //mutableStateListOf<Location>()
     val hasLocation = mutableStateOf(false)
     val locationState = LocationRepository.locationFlow
         .stateIn(

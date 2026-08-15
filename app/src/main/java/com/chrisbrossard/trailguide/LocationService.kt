@@ -15,21 +15,31 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
+import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.ExperimentalTime
 
 
 class LocationService: Service(), SensorEventListener {
@@ -37,11 +47,17 @@ class LocationService: Service(), SensorEventListener {
     private lateinit var locationClient: FusedLocationProviderClient
 
     private var lastLocation = Location("")
+    var serviceJob: Job? = null
+    val client: FusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(this)
+    }
     private var distance = 0
     //private var accuracy = 0
+    private var startTime = 0L
     data class ChartPoint(
-        val distance: Int,
-        val altitude: Int
+        //val distance: Int,
+        val time: Float,
+        val altitude: Float
     )
     companion object {
         private val _trackingData = MutableStateFlow<List<ChartPoint>>(emptyList())
@@ -51,6 +67,7 @@ class LocationService: Service(), SensorEventListener {
     private var currentPressure = -1f
     private var pressureSensor: Sensor? = null
     private lateinit var sensorManager: SensorManager
+    @OptIn(ExperimentalTime::class)
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             serviceScope.launch {
@@ -75,8 +92,8 @@ class LocationService: Service(), SensorEventListener {
 
                 val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
                 val newPoint = ChartPoint(
-                        distance, //+ (Math.random() * 10).toInt(),
-                        a.toInt() //+ (Math.random() * 1000).toInt()
+                    (Clock.System.now().epochSeconds - startTime).toFloat(),
+                        a
                     )
                 _trackingData.update { currentList -> currentList + newPoint}
             }
@@ -90,6 +107,7 @@ class LocationService: Service(), SensorEventListener {
         locationClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
+    @OptIn(ExperimentalTime::class)
     @RequiresApi(Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -103,8 +121,8 @@ class LocationService: Service(), SensorEventListener {
                 val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
                 if (_trackingData.value.isEmpty()) {
                     val zeroPoint = ChartPoint(
-                        0,
-                        a.toInt()
+                        0f,
+                        a
                     )
                     _trackingData.update { currentList -> currentList + zeroPoint}
                 }
@@ -121,10 +139,44 @@ class LocationService: Service(), SensorEventListener {
                     .build()
                 startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
 
+                startTime = Clock.System.now().epochSeconds
+
+                /*serviceJob = CoroutineScope(Dispatchers.IO).launch {
+                    while (isActive) {
+                        val location: Location = suspendCancellableCoroutine { continuation ->
+                            client.getCurrentLocation(
+                                Priority.PRIORITY_HIGH_ACCURACY,
+                                CancellationTokenSource().token
+                            ).addOnSuccessListener { location ->
+                                continuation.resume(
+                                    value = location
+                                ) { cause, _, _ ->
+                                    (cause)
+                                }
+                            }
+                        }
+                        LocationRepository.emitLocation(location)
+                        if (lastLocation.latitude != 0.0) {
+                            distance += lastLocation.distanceTo(location).toInt()
+                        }
+                        lastLocation = location
+                        LocationRepository.emitDistance(distance)
+
+                        val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
+                        val newPoint = ChartPoint(
+                            (Clock.System.now().epochSeconds - startTime).toFloat() / 60f, //distance,
+                            a
+                        )
+                        _trackingData.update { currentList -> currentList + newPoint }
+
+                        delay((60 * 1000).milliseconds)
+                    }
+                }*/
+
                 val locationRequest = LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     10000).apply {
-                        setMaxUpdateDelayMillis(30 * 1000)
+                        setMaxUpdateDelayMillis(60 * 1000)
                 }.build()
 
                 locationClient.requestLocationUpdates(
