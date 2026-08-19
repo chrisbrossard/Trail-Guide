@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.math.pow
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
@@ -65,6 +66,8 @@ class LocationService: Service(), SensorEventListener {
     }
     private var seaLevelPressure = -1f
     private var currentPressure = -1f
+
+    private var seaLevelPressureUpdated = false
     private var pressureSensor: Sensor? = null
     private lateinit var sensorManager: SensorManager
     @OptIn(ExperimentalTime::class)
@@ -73,13 +76,20 @@ class LocationService: Service(), SensorEventListener {
             serviceScope.launch {
                 val locations = result.locations.sortedBy { it.time }
                 var deltaDistance = 0
-                var distanceString = "* "
+                //var distanceString = "* "
+                //locations.forEachIndexed { index, location ->
+                    //if (seaLevelPressure == -1f && currentPressure != -1f && index == 0) {
                 for (location in locations) {
+                    if (!seaLevelPressureUpdated) {
+                        val denominator = 1f - location.altitude / 44330.77
+                        seaLevelPressure = (currentPressure / denominator.pow(5.25588)).toFloat()
+                        seaLevelPressureUpdated = true
+                    }
                     //LocationRepository.emitLocation(location)
                     if (lastLocation.latitude != 0.0) {
                         var subDeltaDistance = lastLocation.distanceTo(location).toInt()
                         deltaDistance += subDeltaDistance
-                        distanceString += "$subDeltaDistance "
+                        //distanceString += "$subDeltaDistance "
                     }
                     lastLocation = location
                 }

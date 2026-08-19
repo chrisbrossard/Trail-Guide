@@ -12,6 +12,7 @@ class LocationViewModel: ViewModel() {
     val location = mutableStateOf(Location(""))
     val locationHistory = LocationRepository.locationHistory //mutableStateListOf<Location>()
     val hasLocation = mutableStateOf(false)
+    val locationRequest = mutableStateOf(false)
     val locationState = LocationRepository.locationFlow
         .stateIn(
             scope = viewModelScope,
