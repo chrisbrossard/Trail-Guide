@@ -23,6 +23,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,71 +103,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     val fusedLocationProviderClient: FusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(this)
     }
-    // this is to catch when the user goes to settings to enable location permission and then backs out.
-    val singleLocationRequestSettingsLauncher = registerForActivityResult(
-    ActivityResultContracts.StartActivityForResult()
-    ) {
-        val requiredPermissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) ==
-                    PackageManager.PERMISSION_GRANTED
-        }
-        if (missingPermissions.isNotEmpty()) {
-            if (!locationViewModel.hasLocation.value) {
-                @SuppressLint("MissingPermission")
-                fusedLocationProviderClient.getCurrentLocation(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    CancellationTokenSource().token
-                ).addOnSuccessListener { location: Location ->
-                    if (location.hasAltitude()) {
-                        locationViewModel.location.value = location
-                        val denominator =
-                            1f - locationViewModel.location.value.altitude / 44330.77
-                        pressureViewModel.seaLevelPressure.floatValue =
-                            pressureViewModel.currentPressure.floatValue /
-                                    denominator.pow(5.25588).toFloat()
-                        locationViewModel.hasLocation.value = true
-                    }
-                }
-            }
-        }
-    }
-    // this is to catch when the user goes to settings to enable location or notifications and backs out
-    val continuousLocationAndNotificationRequestSettingsLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        var locationGranted = false
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationGranted = true
-        } else  if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            locationGranted = true
-        }
-        var postGranted = false
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            postGranted = true
-        }
-        if (locationGranted && postGranted) {
-            distanceViewModel.distanceState.value = OnOffState.STARTING
-        } else {
-            distanceViewModel.distanceState.value = OnOffState.OFF
-        }
-    }
+
     lateinit var singleLocationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>
     lateinit var continuousLocationAndNotificationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>
     private var pressureSensor: Sensor? = null
@@ -194,7 +131,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 locationGranted = true
-            } else  if (ContextCompat.checkSelfPermission(
+            } else if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) ==
@@ -202,15 +139,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             ) {
                 locationGranted = true
             }
-            /*var postGranted = false
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                postGranted = true
-            }*/
-            if (locationGranted) { // && postGranted) {
+            if (locationGranted) {
                 if (!locationViewModel.hasLocation.value) {
                     fusedLocationProviderClient.getCurrentLocation(
                         Priority.PRIORITY_HIGH_ACCURACY,
@@ -227,19 +156,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         }
                     }
                 }
-                /*setContent {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        Greeting(
-                            innerPadding,
-                            pressureViewModel,
-                            deadlineViewModel,
-                            locationViewModel,
-                            distanceViewModel,
-                            fusedLocationProviderClient
-                        )
-                    }
-                }*/
-                //distanceViewModel.distanceState.value = OnOffState.STARTING
             } else {
                 if (shouldShowRequestPermissionRationale(
                         Manifest.permission.ACCESS_COARSE_LOCATION
@@ -252,38 +168,29 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     )
-                    val builder = AlertDialog.Builder(this)
-                    builder.setTitle("Location permission")
-                    builder.setMessage(
-                        "Location permission required for calculating sunset time"
-                    )
-                    builder.setPositiveButton("OK") { _, _ ->
-                        singleLocationRequestPermissionLauncher.launch(requiredPermissions)
+                    val grantedPermissions = requiredPermissions.filter {
+                        ContextCompat.checkSelfPermission(this, it) ==
+                                PackageManager.PERMISSION_GRANTED
                     }
-                    builder.setNegativeButton("Settings") { _, _ ->
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", packageName, null)
+                    if (grantedPermissions.isEmpty()) {
+                        val builder = AlertDialog.Builder(this)
+                        builder.setTitle("Location permission")
+                        builder.setMessage(
+                            "Location permission required for calculating sunset time"
+                        )
+                        builder.setPositiveButton("OK") { _, _ ->
+                            singleLocationRequestPermissionLauncher.launch(requiredPermissions)
                         }
-                        //startActivity(intent)
-                        singleLocationRequestSettingsLauncher.launch(intent)
-                    }
-                    val dialog: AlertDialog = builder.create()
-                    dialog.show()
-                } else {
-                    val builder = AlertDialog.Builder(this)
-                    builder.setTitle("Location permission")
-                    builder.setMessage(
-                        "Location permission required for calculating sunset time"
-                    )
-                    builder.setPositiveButton("Settings") { _, _ ->
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", packageName, null)
+                        builder.setNegativeButton("Settings") { _, _ ->
+                            val intent =
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", packageName, null)
+                                }
+                            startActivity(intent)
                         }
-                        //startActivity(intent)
-                        singleLocationRequestSettingsLauncher.launch(intent)
+                        val dialog: AlertDialog = builder.create()
+                        dialog.show()
                     }
-                    val dialog: AlertDialog = builder.create()
-                    dialog.show()
                 }
             }
         }
@@ -293,100 +200,63 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         ) { _ ->
             // permissions granted is not always correct.
             // Permissions must be checked manually
-            var locationGranted = false
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                locationGranted = true
+                locationViewModel.locationGranted.value = true
             } else if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
-                locationGranted = true
+                locationViewModel.locationGranted.value = true
             }
-            var postGranted = false
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                postGranted = true
+                locationViewModel.notificationGranted.value = true
             }
 
-            if (!locationGranted) {
-
+            if (!locationViewModel.locationGranted.value || !locationViewModel.notificationGranted.value) {
                 if (shouldShowRequestPermissionRationale(
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     ) ||
                     shouldShowRequestPermissionRationale(
                         Manifest.permission.ACCESS_FINE_LOCATION
+                    ) ||
+                    shouldShowRequestPermissionRationale(
+                        Manifest.permission.POST_NOTIFICATIONS
                     )
                 ) {
-                    val requiredPermissions = arrayOf(
+                    var requiredPermissions = arrayOf(
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     )
-                    val builder = AlertDialog.Builder(this)
-                    builder.setTitle("Location permission")
-                    builder.setMessage(
-                        "Location permission required for calculating distance," +
-                                " track, and elevation"
-                    )
-                    builder.setPositiveButton("OK") { _, _ ->
-                        continuousLocationAndNotificationRequestPermissionLauncher.launch(
-                            requiredPermissions
-                        )
-                    }
-                    builder.setNegativeButton("Settings") { _, _ ->
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", packageName, null)
-                        }
-                        //startActivity(intent)
-                        continuousLocationAndNotificationRequestSettingsLauncher.launch(intent)
-
-                    }
-                    val dialog: AlertDialog = builder.create()
-                    dialog.show()
-                } else {
-                    val builder = AlertDialog.Builder(this)
-                    builder.setTitle("Location permission")
-                    builder.setMessage(
-                        "Location permission required for calculating distance," +
-                                " track, and elevation"
-                    )
-                    builder.setPositiveButton("Settings") { _, _ ->
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", packageName, null)
-                        }
-                        //startActivity(intent)
-                        continuousLocationAndNotificationRequestSettingsLauncher.launch(intent)
-                    }
-                    val dialog: AlertDialog = builder.create()
-                    dialog.show()
-                }
-            }
-            if (!postGranted) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    if (shouldShowRequestPermissionRationale(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requiredPermissions = arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.POST_NOTIFICATIONS
                         )
-                    ) {
-                        val requiredPermissions = arrayOf(
-                            Manifest.permission.POST_NOTIFICATIONS
-                        )
+                    }
+                    val missingPermissions = requiredPermissions.filter {
+                        ContextCompat.checkSelfPermission(this, it) ==
+                                PackageManager.PERMISSION_DENIED
+                    }
+                    if (missingPermissions.isNotEmpty()) {
                         val builder = AlertDialog.Builder(this)
-                        builder.setTitle("Notification permission")
+                        builder.setTitle("Location permission")
                         builder.setMessage(
-                            "Notification permission required for calculating distance," +
-                                    " track, and elevation"
+                            "Location permission required for calculating distance"
                         )
                         builder.setPositiveButton("OK") { _, _ ->
                             continuousLocationAndNotificationRequestPermissionLauncher.launch(
-                                requiredPermissions
+                                missingPermissions.toTypedArray()
                             )
                         }
                         builder.setNegativeButton("Settings") { _, _ ->
@@ -394,94 +264,36 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                     data = Uri.fromParts("package", packageName, null)
                                 }
-                            //startActivity(intent)
-                            continuousLocationAndNotificationRequestSettingsLauncher.launch(intent)
-                        }
-                        val dialog: AlertDialog = builder.create()
-                        dialog.show()
-                    } else {
-                        val builder = AlertDialog.Builder(this)
-                        builder.setTitle("Notification permission")
-                        builder.setMessage(
-                            "Notification permission required for calculating distance," +
-                                    " track, and elevation"
-                        )
-                        builder.setPositiveButton("Settings") { _, _ ->
-                            val intent =
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", packageName, null)
-                                }
-                            //startActivity(intent)
-                            continuousLocationAndNotificationRequestSettingsLauncher.launch(intent)
+                            startActivity(intent)
+                            distanceViewModel.distanceState.value = OnOffState.OFF
                         }
                         val dialog: AlertDialog = builder.create()
                         dialog.show()
                     }
                 }
             }
-            if (locationGranted && postGranted) {
+
+            if (locationViewModel.locationGranted.value && locationViewModel.notificationGranted.value) {
                 distanceViewModel.distanceState.value = OnOffState.STARTING
             }
         }
 
-        var permissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions = arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-               // Manifest.permission.POST_NOTIFICATIONS
-            )
-        }
-
-        var locationGranted = false
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            locationGranted = true
-        } else if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            locationGranted = true
-        }
-        /*var postGranted = false
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            postGranted = true
-        }*/
-
-            //if (locationGranted) { // && postGranted) {
-            setContent {
-                TrailGuideTheme {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        Greeting(
-                            innerPadding,
-                            pressureViewModel,
-                            deadlineViewModel,
-                            locationViewModel,
-                            distanceViewModel,
-                            fusedLocationProviderClient,
-                            singleLocationRequestPermissionLauncher,
-                            continuousLocationAndNotificationRequestPermissionLauncher
-                            )
-                    }
+        setContent {
+            TrailGuideTheme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Greeting(
+                        innerPadding,
+                        pressureViewModel,
+                        deadlineViewModel,
+                        locationViewModel,
+                        distanceViewModel,
+                        fusedLocationProviderClient,
+                        singleLocationRequestPermissionLauncher,
+                        continuousLocationAndNotificationRequestPermissionLauncher,
+                    )
                 }
             }
-        /*} else {
-            locationRequestPermissionLauncher.launch(permissions)
-        }*/
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -528,7 +340,7 @@ fun Greeting(
     myDistanceViewModel: DistanceViewModel,
     myFusedLocationProviderClient: FusedLocationProviderClient,
     singleLocationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>,
-    continuousLocationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>,
+    continuousLocationAndNotificationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>,
     myTimerViewModel: TimerViewModel = viewModel(),
     ) {
     val hikingTime by myTimerViewModel.time.collectAsStateWithLifecycle()
@@ -685,7 +497,7 @@ fun Greeting(
                     myLocationViewModel,
                     myDistanceViewModel,
                     myPressureViewModel,
-                    continuousLocationRequestPermissionLauncher
+                    continuousLocationAndNotificationRequestPermissionLauncher,
                     //myFusedLocationProviderClient
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -802,7 +614,7 @@ fun Greeting(
                         myLocationViewModel,
                         myDistanceViewModel,
                         myPressureViewModel,
-                        continuousLocationRequestPermissionLauncher
+                        continuousLocationAndNotificationRequestPermissionLauncher,
                         //myFusedLocationProviderClient
                     )
                     AltitudeDistanceChart()
@@ -812,23 +624,7 @@ fun Greeting(
     }
 }
 
-/*@Composable
-fun HikingTime(
-    hikingTime: Int,
-) {
-    val timeString = secondsToHoursAndMinutes(hikingTime)
 
-    Column {
-
-        Text(
-            text = timeString,
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Text(
-            text = "Hiking time"
-        )
-    }
-}*/
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -942,6 +738,506 @@ fun DeadlineTimePicker(
         }
     }
 }
+
+
+
+enum class OnOffState {
+    OFF, PERMISSION, STARTING, ON, STOPPING
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+fun Distance(
+    myLocationViewModel: LocationViewModel,
+    myDistanceViewModel: DistanceViewModel,
+    myPressureViewModel: PressureViewModel,
+    continuousLocationAndNotificationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>,
+    //myFusedLocationProviderClient: FusedLocationProviderClient
+) {
+    //val location by myLocationViewModel.locationState.collectAsStateWithLifecycle()
+    val distance by myLocationViewModel.distanceState.collectAsStateWithLifecycle()
+    //val accuracy by myLocationViewModel.accuracyState.collectAsStateWithLifecycle()
+    //val speed by myLocationViewModel.speedState.collectAsStateWithLifecycle()
+    //val updateCount by myLocationViewModel.updateCountState.collectAsStateWithLifecycle()
+    //val deltaDistance by myLocationViewModel.deltaDistanceState.collectAsStateWithLifecycle()
+    //val subDeltaDistances by myLocationViewModel.subDeltaDistances.collectAsStateWithLifecycle()
+    //val lifeCycleOwner = LocalLifecycleOwner.current
+
+    // detect onStop call
+    /*DisposableEffect(lifeCycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                myDistanceViewModel.distanceState.value = OnOffState.STOPPING
+            }
+        }
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }*/
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$distance m",
+                    //" " + subDeltaDistances +
+                    //" " + deltaDistance.toString() +
+                    //" " + accuracy.toString(),
+                    //" " + speed.toString(),
+                    //" " + updateCount.toString(),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.clickable {
+                myDistanceViewModel.startChartActivity.value = true
+            }
+        )
+        Spacer(modifier = Modifier.padding(6.dp))
+        Button(
+            onClick = {
+                when (myDistanceViewModel.distanceState.value) {
+                    OnOffState.OFF -> {
+                        myDistanceViewModel.distanceState.value = OnOffState.PERMISSION
+                    }
+
+                    OnOffState.PERMISSION -> {
+
+                    }
+
+                    OnOffState.STARTING -> {
+
+                    }
+
+                    OnOffState.ON -> {
+                        myDistanceViewModel.distanceState.value = OnOffState.STOPPING
+                    }
+
+                    OnOffState.STOPPING -> {
+
+                    }
+                }
+            }
+        ) {
+            Text(
+                text = myDistanceViewModel.buttonString.value
+            )
+        }
+    }
+    Text("Distance")
+    when (myDistanceViewModel.distanceState.value) {
+        OnOffState.OFF -> {
+        }
+        OnOffState.PERMISSION -> {
+            var requiredPermissions = arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requiredPermissions = arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            }
+            val missingPermissions = requiredPermissions.filter {
+                ContextCompat.checkSelfPermission(LocalContext.current, it) ==
+                        PackageManager.PERMISSION_DENIED
+            }
+            if (missingPermissions.isEmpty() && myLocationViewModel.notificationGranted.value) {
+                myDistanceViewModel.distanceState.value = OnOffState.STARTING
+            } else {
+                continuousLocationAndNotificationRequestPermissionLauncher.launch(missingPermissions.toTypedArray())
+            }
+        }
+        OnOffState.STARTING -> {
+            val intent = Intent(
+                LocalContext.current,
+                LocationService::class.java).apply {
+                action = "START"
+            }
+            if (myLocationViewModel.hasLocation.value) {
+                intent.putExtra("sea_level_pressure", myPressureViewModel.seaLevelPressure.floatValue)
+            } else {
+                intent.putExtra("sea_level_pressure", SensorManager.PRESSURE_STANDARD_ATMOSPHERE)
+            }
+                //myPressureViewModel.seaLevelPressure.floatValue)
+            intent.putExtra("current_pressure",
+                myPressureViewModel.currentPressure.floatValue)
+            LocalContext.current.startForegroundService(intent)
+            myDistanceViewModel.buttonString.value = "Stop"
+            myDistanceViewModel.distanceState.value = OnOffState.ON
+        }
+        OnOffState.ON -> {
+        }
+        OnOffState.STOPPING -> {
+            val intent = Intent(
+                LocalContext.current,
+                LocationService::class.java).apply {
+                action = "STOP"
+            }
+            LocalContext.current.stopService(intent)
+            myDistanceViewModel.buttonString.value = "Start"
+            myDistanceViewModel.distanceState.value = OnOffState.OFF
+        }
+    }
+}
+
+@Composable
+fun TrackChart(
+    locationViewModel: LocationViewModel,
+    //locations: List<Location>
+    location: Location
+) {
+    Canvas(
+        modifier = Modifier.size(200.dp).background(Color.Transparent)
+    ) {
+        var path = Path()
+        path.moveTo(0f, 0f)
+        path.lineTo(size.width, 0f)
+        path.lineTo(size.width, size.height)
+        path.lineTo(0f, size.height)
+        path.close()
+        drawPath(
+            path = path,
+            color = Color.Black,
+            style = Stroke(width = 1.dp.toPx())
+        )
+        path = Path()
+        //var dx = 0f
+        //var dy = 0f
+        //path.moveTo(size.width / 2f, size.height / 2f
+        if (locationViewModel.locationHistory.isNotEmpty() && locationViewModel.locationHistory.size > 1) {
+
+            val minimumLatitude = locationViewModel.locationHistory.minOf { it.latitude}
+            val maximumLatitude = locationViewModel.locationHistory.maxOf { it.latitude }
+            val minimumLongitude = locationViewModel.locationHistory.minOf { it.longitude }
+            val maximumLongitude = locationViewModel.locationHistory.maxOf { it.longitude }
+
+            val latitudeRange = maximumLatitude - minimumLatitude
+            val longitudeRange = maximumLongitude - minimumLongitude
+
+            //if (latitudeRange != 0.0 && longitudeRange != 0.0) {
+            for ((index, location) in locationViewModel.locationHistory.withIndex()) {
+                if (location.latitude != 0.0) {
+                    val range = maxOf(latitudeRange, longitudeRange)
+                    //val range = if (longitudeRange > latitudeRange) longitudeRange else latitudeRange
+                    val latitudeFraction: Double = if (range != 0.0) {
+                        (location.latitude - minimumLatitude) / range
+                    } else {
+                        0.5
+                    }
+                    val longitudeFraction: Double = if (range != 0.0) {
+                        (location.longitude - minimumLongitude) / range
+                    } else {
+                        0.5
+                    }
+                    var x = longitudeFraction * size.width
+                    val deltaX = longitudeRange / range * size.width
+                    val offsetX = size.width / 2 - deltaX / 2
+                    x += offsetX
+                    var y = (1.0 - latitudeFraction) * size.height
+                    val deltaY = latitudeRange / range * size.height
+                    val offsetY = size.height / 2 - deltaY / 2
+                    y -= offsetY
+                    if (index == 0) {
+                        path.moveTo(x.toFloat(), y.toFloat())
+                        /*drawCircle(
+                            center = Offset(x.toFloat(), y = y.toFloat()),
+                            radius = 8f,
+                            color = Color.Red,
+                            style = Stroke(width = 2f))*/
+                    } else {
+                        path.lineTo(x.toFloat(), y.toFloat())
+                        /*drawCircle(
+                            center = Offset(x.toFloat(), y = y.toFloat()),
+                            radius = 8f,
+                            color = Color.Red,
+                            style = Stroke(width = 2f))*/
+                    }
+                }
+            }
+            //path.close()
+            drawPath(
+                path = path,
+                color = Color.Red,
+                style = Stroke(width = 2.dp.toPx())
+            )
+        }
+    }
+}
+
+@Composable
+fun AltitudeDistanceChart(
+    viewModel: AltitudeDistanceChartViewModel = viewModel()
+) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    val axisTitleComponent = rememberTextComponent()
+
+    LaunchedEffect(Unit) {
+        modelProducer.runTransaction {
+            lineModel{ series(13, 8, 7, 12, 0, 1, 15, 14, 0, 11, 6, 12, 0, 11, 12, 11) }
+        }
+    }
+
+    Box(
+        //modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CartesianChartHost(
+            rememberCartesianChart(
+                rememberLineCartesianLayer(
+                    /*lineSpecs = listOf(
+                        rememberLineSpec(
+                            shader = verticalGradient
+                        )
+                    )*/
+                    lineProvider = LineCartesianLayer.LineProvider.series(
+                        LineCartesianLayer.rememberLine(
+                            fill = LineCartesianLayer.LineFill.single(Fill(Color.Red)),
+                            areaFill = LineCartesianLayer.AreaFill.single(
+                                fill = Fill(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary
+                                                .copy(alpha = 0.25f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                            ),
+                            interpolator = LineCartesianLayer.Interpolator
+                                .cubic(curvature = 0.38f),
+                            /*fixpointProvider = LineCartesianLayer.PointProvider.single(
+                                point = LineCartesianLayer.Point(
+                                    component = rememberShapeComponent(
+                                        fill = Fill(Color.Red),
+                                        shape = CircleShape
+                                    ),
+                                    size = 10.dp
+                                )
+                            )*/
+                        )
+                    )
+                ),
+                startAxis = VerticalAxis.rememberStart(
+                    title = { "Altitude (m)" },
+                    titleComponent = axisTitleComponent,
+                ),
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    title = { "Distance (m)" },
+                    titleComponent = axisTitleComponent,
+                    valueFormatter = { _, value, _ -> "${value.toInt()}" }
+                ),
+            ),
+            modelProducer = viewModel.modelProducer
+        )
+    }
+}
+
+/*fun secondsToTimeOfDay(seconds: Int): String {
+    var timeString = String.format(Locale.US, "%02d", (seconds / 3600)) + ":"
+    timeString += String.format(Locale.US, "%02d", ((seconds % 3600) / 60))
+    return timeString
+}*/
+
+fun secondsToHoursAndMinutes(seconds: Int): String {
+    var timeString = (seconds / 3600).toString() + " h "
+    timeString += ((seconds % 3600) / 60).toString() + " m"
+    return timeString
+}
+
+/*fun secondsToMinutesAndSeconds(seconds: Int): String {
+    var timeString = ((seconds % 3600) / 60).toString() + "m "
+    timeString += (seconds % 60).toString() + "s"
+    return timeString
+}*/
+
+/*@Composable
+fun HikingTime(
+    hikingTime: Int,
+) {
+    val timeString = secondsToHoursAndMinutes(hikingTime)
+
+    Column {
+
+        Text(
+            text = timeString,
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = "Hiking time"
+        )
+    }
+}*/
+
+/*Row(
+    modifier = Modifier.height(IntrinsicSize.Max)
+) {
+    /*TurnaroundTimeRadioButtonGroup(
+        options,
+        selectedOption,
+        onTurnaroundTypeChanged = { selectedOption = it }
+    )*/
+    Column(
+        modifier = Modifier.weight(1f).fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Column(
+            modifier = Modifier
+                .selectableGroup()
+                .padding(4.dp)
+        ) {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .selectable(
+                            selected = (option == selectedOption),
+                            onClick = {
+                                selectedOption = option
+                            },
+                            role = Role.RadioButton
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (option == selectedOption),
+                        onClick = null
+                    )
+                    Text(option)
+                }
+            }
+        }
+        Text("Turnaround based on")
+    }
+    Column(
+        modifier = Modifier.weight(1f).fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        val timeString = TurnaroundTime(
+            myTimerViewModel,
+            myDeadlineViewModel,
+            selectedOption,
+            hikingTime,
+            timeToSunset.intValue,
+            timeToDeadline.intValue
+        )
+        Text(
+            text = timeString,
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = "Turnaround time"
+        )
+    }
+}
+Spacer(modifier = Modifier.height(32.dp))*/
+
+/*AltitudeChange(
+    myPressureViewModel
+)
+Altitude(
+    myPressureViewModel,
+    myLocationViewModel,
+    seaLevelPressure.floatValue,
+    onAlertShownChanged = { alertShown.value = it} ,
+    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it }
+)
+AltitudeAlertDialog(
+    myPressureViewModel,
+    alertShown.value,
+    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it},
+    onAlertShownChanged = { alertShown.value = it}
+)*/
+/*Canvas(
+    modifier = Modifier
+        .size(200.dp)
+        .background(Color.Blue)
+){
+
+}*/
+
+/*val fusedLocationProviderClient: FusedLocationProviderClient by lazy {
+    LocationServices.getFusedLocationProviderClient(this)
+}
+@SuppressLint("MissingPermission")
+fusedLocationProviderClient.getCurrentLocation(
+    Priority.PRIORITY_HIGH_ACCURACY,
+    CancellationTokenSource().token
+).addOnSuccessListener { location ->
+    if (location != null) {
+        locationViewModel.location.value = location
+        val denominator = 1f - locationViewModel.location.value.altitude / 44330.77
+        pressureViewModel.seaLevelPressure.floatValue =
+            pressureViewModel.currentPressure.floatValue /
+                    denominator.pow(5.25588).toFloat()
+    }
+}*/
+
+// this is to catch when the user goes to settings to enable location permission and then backs out.
+/*val singleLocationRequestSettingsLauncher = registerForActivityResult(
+ActivityResultContracts.StartActivityForResult()
+) {
+    val requiredPermissions = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+    val missingPermissions = requiredPermissions.filter {
+        ContextCompat.checkSelfPermission(this, it) ==
+                PackageManager.PERMISSION_GRANTED
+    }
+    if (missingPermissions.isNotEmpty()) {
+        if (!locationViewModel.hasLocation.value) {
+            @SuppressLint("MissingPermission")
+            fusedLocationProviderClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                CancellationTokenSource().token
+            ).addOnSuccessListener { location: Location ->
+                if (location.hasAltitude()) {
+                    locationViewModel.location.value = location
+                    val denominator =
+                        1f - locationViewModel.location.value.altitude / 44330.77
+                    pressureViewModel.seaLevelPressure.floatValue =
+                        pressureViewModel.currentPressure.floatValue /
+                                denominator.pow(5.25588).toFloat()
+                    locationViewModel.hasLocation.value = true
+                }
+            }
+        }
+    }
+}*/
+// this is to catch when the user goes to settings to enable location or notifications and backs out
+/*val continuousLocationAndNotificationRequestSettingsLauncher = registerForActivityResult(
+    ActivityResultContracts.StartActivityForResult()
+) {
+    var locationGranted = false
+    if (ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        locationGranted = true
+    } else  if (ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) ==
+        PackageManager.PERMISSION_GRANTED
+    ) {
+        locationGranted = true
+    }
+    var postGranted = false
+    if (ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        postGranted = true
+    }
+    if (locationGranted && postGranted) {
+        distanceViewModel.distanceState.value = OnOffState.STARTING
+    } else {
+        distanceViewModel.distanceState.value = OnOffState.OFF
+    }
+}*/
 
 /*@Composable
 fun TurnaroundTimeRadioButtonGroup(
@@ -1161,439 +1457,5 @@ fun AltitudeAlertDialog(
                 )
             }
         )
-    }
-}*/
-
-enum class OnOffState {
-    OFF, PERMISSION, STARTING, ON, STOPPING
-}
-
-@OptIn(ExperimentalTime::class)
-@Composable
-fun Distance(
-    myLocationViewModel: LocationViewModel,
-    myDistanceViewModel: DistanceViewModel,
-    myPressureViewModel: PressureViewModel,
-    continuousLocationRequestPermissionLauncher: ActivityResultLauncher<Array<String>>
-    //myFusedLocationProviderClient: FusedLocationProviderClient
-) {
-    //val location by myLocationViewModel.locationState.collectAsStateWithLifecycle()
-    val distance by myLocationViewModel.distanceState.collectAsStateWithLifecycle()
-    //val accuracy by myLocationViewModel.accuracyState.collectAsStateWithLifecycle()
-    //val speed by myLocationViewModel.speedState.collectAsStateWithLifecycle()
-    //val updateCount by myLocationViewModel.updateCountState.collectAsStateWithLifecycle()
-    //val deltaDistance by myLocationViewModel.deltaDistanceState.collectAsStateWithLifecycle()
-    //val subDeltaDistances by myLocationViewModel.subDeltaDistances.collectAsStateWithLifecycle()
-    //val lifeCycleOwner = LocalLifecycleOwner.current
-
-    // detect onStop call
-    /*DisposableEffect(lifeCycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                myDistanceViewModel.distanceState.value = OnOffState.STOPPING
-            }
-        }
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }*/
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "$distance m",
-                    //" " + subDeltaDistances +
-                    //" " + deltaDistance.toString() +
-                    //" " + accuracy.toString(),
-                    //" " + speed.toString(),
-                    //" " + updateCount.toString(),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.clickable {
-                myDistanceViewModel.startChartActivity.value = true
-            }
-        )
-        Spacer(modifier = Modifier.padding(6.dp))
-        Button(
-            onClick = {
-                when (myDistanceViewModel.distanceState.value) {
-                    OnOffState.OFF -> {
-                        myDistanceViewModel.distanceState.value = OnOffState.PERMISSION
-                    }
-
-                    OnOffState.PERMISSION -> {
-
-                    }
-
-                    OnOffState.STARTING -> {
-
-                    }
-
-                    OnOffState.ON -> {
-                        myDistanceViewModel.distanceState.value = OnOffState.STOPPING
-                    }
-
-                    OnOffState.STOPPING -> {
-
-                    }
-                }
-            }
-        ) {
-            Text(
-                text = myDistanceViewModel.buttonString.value
-            )
-        }
-    }
-    Text("Distance")
-    when (myDistanceViewModel.distanceState.value) {
-        OnOffState.OFF -> {
-        }
-        OnOffState.PERMISSION -> {
-            var requiredPermissions = arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requiredPermissions = arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
-            }
-            val missingPermissions = requiredPermissions.filter {
-                ContextCompat.checkSelfPermission(LocalContext.current, it) ==
-                        PackageManager.PERMISSION_DENIED
-            }
-            if (missingPermissions.isEmpty()) {
-                myDistanceViewModel.distanceState.value = OnOffState.STARTING
-            } else {
-                continuousLocationRequestPermissionLauncher.launch(missingPermissions.toTypedArray())
-            }
-        }
-        OnOffState.STARTING -> {
-            val intent = Intent(
-                LocalContext.current,
-                LocationService::class.java).apply {
-                action = "START"
-            }
-            intent.putExtra("sea_level_pressure", SensorManager.PRESSURE_STANDARD_ATMOSPHERE)
-                //myPressureViewModel.seaLevelPressure.floatValue)
-            intent.putExtra("current_pressure",
-                myPressureViewModel.currentPressure.floatValue)
-            LocalContext.current.startForegroundService(intent)
-            myDistanceViewModel.buttonString.value = "Stop"
-            myDistanceViewModel.distanceState.value = OnOffState.ON
-        }
-        OnOffState.ON -> {
-        }
-        OnOffState.STOPPING -> {
-            val intent = Intent(
-                LocalContext.current,
-                LocationService::class.java).apply {
-                action = "STOP"
-            }
-            LocalContext.current.stopService(intent)
-            myDistanceViewModel.buttonString.value = "Start"
-            myDistanceViewModel.distanceState.value = OnOffState.OFF
-        }
-    }
-}
-
-@Composable
-fun TrackChart(
-    locationViewModel: LocationViewModel,
-    //locations: List<Location>
-    location: Location
-) {
-    //val location by locationViewModel.locationState.collectAsStateWithLifecycle()
-    //val locationHistory = remember { mutableStateListOf<Location>() }
-
-    /*LaunchedEffect(location) {
-        //for (location in locations) {
-            if (location.latitude != 0.0) {
-                //if (location.provider.isNotEmpty()) { // Avoid adding the initial empty value
-                locationViewModel.locationHistory.add(location)
-                //}
-            }
-        //}
-        Log.d(
-            "GPS",
-            "history size = ${locationViewModel.locationHistory.size}, " +
-                    "lat=${location.latitude}, lon=${location.longitude}, " +
-                    "time=${location.time}"
-        )
-    }*/
-
-    /*if (locationViewModel.locationHistory.isEmpty() || locationViewModel.locationHistory.size == 1) {
-        return
-    }*/
-
-    Canvas(
-        modifier = Modifier.size(200.dp).background(Color.Transparent)
-    ) {
-        var path = Path()
-        path.moveTo(0f, 0f)
-        path.lineTo(size.width, 0f)
-        path.lineTo(size.width, size.height)
-        path.lineTo(0f, size.height)
-        path.close()
-        drawPath(
-            path = path,
-            color = Color.Black,
-            style = Stroke(width = 1.dp.toPx())
-        )
-        path = Path()
-        //var dx = 0f
-        //var dy = 0f
-        //path.moveTo(size.width / 2f, size.height / 2f
-        if (locationViewModel.locationHistory.isNotEmpty() && locationViewModel.locationHistory.size > 1) {
-
-            val minimumLatitude = locationViewModel.locationHistory.minOf { it.latitude}
-            val maximumLatitude = locationViewModel.locationHistory.maxOf { it.latitude }
-            val minimumLongitude = locationViewModel.locationHistory.minOf { it.longitude }
-            val maximumLongitude = locationViewModel.locationHistory.maxOf { it.longitude }
-
-            val latitudeRange = maximumLatitude - minimumLatitude
-            val longitudeRange = maximumLongitude - minimumLongitude
-
-            //if (latitudeRange != 0.0 && longitudeRange != 0.0) {
-            for ((index, location) in locationViewModel.locationHistory.withIndex()) {
-                if (location.latitude != 0.0) {
-                    val range = maxOf(latitudeRange, longitudeRange)
-                    //val range = if (longitudeRange > latitudeRange) longitudeRange else latitudeRange
-                    val latitudeFraction: Double = if (range != 0.0) {
-                        (location.latitude - minimumLatitude) / range
-                    } else {
-                        0.5
-                    }
-                    val longitudeFraction: Double = if (range != 0.0) {
-                        (location.longitude - minimumLongitude) / range
-                    } else {
-                        0.5
-                    }
-                    var x = longitudeFraction * size.width
-                    val deltaX = longitudeRange / range * size.width
-                    val offsetX = size.width / 2 - deltaX / 2
-                    x += offsetX
-                    var y = (1.0 - latitudeFraction) * size.height
-                    val deltaY = latitudeRange / range * size.height
-                    val offsetY = size.height / 2 - deltaY / 2
-                    y -= offsetY
-                    if (index == 0) {
-                        path.moveTo(x.toFloat(), y.toFloat())
-                        /*drawCircle(
-                            center = Offset(x.toFloat(), y = y.toFloat()),
-                            radius = 6f,
-                            color = Color.Red,
-                            style = Stroke(width = 2f))*/
-                    } else {
-                        path.lineTo(x.toFloat(), y.toFloat())
-                        /*drawCircle(
-                            center = Offset(x.toFloat(), y = y.toFloat()),
-                            radius = 6f,
-                            color = Color.Red,
-                            style = Stroke(width = 2f))*/
-                    }
-                }
-            }
-            //path.close()
-            drawPath(
-                path = path,
-                color = Color.Red,
-                style = Stroke(width = 2.dp.toPx())
-            )
-        }
-    }
-}
-
-@Composable
-fun AltitudeDistanceChart(
-    viewModel: AltitudeDistanceChartViewModel = viewModel()
-) {
-    val modelProducer = remember { CartesianChartModelProducer() }
-    val axisTitleComponent = rememberTextComponent()
-
-    LaunchedEffect(Unit) {
-        modelProducer.runTransaction {
-            lineModel{ series(13, 8, 7, 12, 0, 1, 15, 14, 0, 11, 6, 12, 0, 11, 12, 11) }
-        }
-    }
-
-    Box(
-        //modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CartesianChartHost(
-            rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    /*lineSpecs = listOf(
-                        rememberLineSpec(
-                            shader = verticalGradient
-                        )
-                    )*/
-                    lineProvider = LineCartesianLayer.LineProvider.series(
-                        LineCartesianLayer.rememberLine(
-                            fill = LineCartesianLayer.LineFill.single(Fill(Color.Red)),
-                            areaFill = LineCartesianLayer.AreaFill.single(
-                                fill = Fill(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primary
-                                                .copy(alpha = 0.25f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                            ),
-                            interpolator = LineCartesianLayer.Interpolator
-                                .cubic(curvature = 0.38f),
-                            /*fixpointProvider = LineCartesianLayer.PointProvider.single(
-                                point = LineCartesianLayer.Point(
-                                    component = rememberShapeComponent(
-                                        fill = Fill(Color.Red),
-                                        shape = CircleShape
-                                    ),
-                                    size = 10.dp
-                                )
-                            )*/
-                        )
-                    )
-                ),
-                startAxis = VerticalAxis.rememberStart(
-                    title = { "Altitude (m)" },
-                    titleComponent = axisTitleComponent,
-                ),
-                bottomAxis = HorizontalAxis.rememberBottom(
-                    title = { "Distance (m)" },
-                    titleComponent = axisTitleComponent,
-                    valueFormatter = { _, value, _ -> "${value.toInt()}" }
-                ),
-            ),
-            modelProducer = viewModel.modelProducer
-        )
-    }
-}
-
-/*fun secondsToTimeOfDay(seconds: Int): String {
-    var timeString = String.format(Locale.US, "%02d", (seconds / 3600)) + ":"
-    timeString += String.format(Locale.US, "%02d", ((seconds % 3600) / 60))
-    return timeString
-}*/
-
-fun secondsToHoursAndMinutes(seconds: Int): String {
-    var timeString = (seconds / 3600).toString() + " h "
-    timeString += ((seconds % 3600) / 60).toString() + " m"
-    return timeString
-}
-
-/*fun secondsToMinutesAndSeconds(seconds: Int): String {
-    var timeString = ((seconds % 3600) / 60).toString() + "m "
-    timeString += (seconds % 60).toString() + "s"
-    return timeString
-}*/
-
-
-/*Row(
-    modifier = Modifier.height(IntrinsicSize.Max)
-) {
-    /*TurnaroundTimeRadioButtonGroup(
-        options,
-        selectedOption,
-        onTurnaroundTypeChanged = { selectedOption = it }
-    )*/
-    Column(
-        modifier = Modifier.weight(1f).fillMaxHeight(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Column(
-            modifier = Modifier
-                .selectableGroup()
-                .padding(4.dp)
-        ) {
-            options.forEach { option ->
-                Row(
-                    modifier = Modifier
-                        .selectable(
-                            selected = (option == selectedOption),
-                            onClick = {
-                                selectedOption = option
-                            },
-                            role = Role.RadioButton
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = (option == selectedOption),
-                        onClick = null
-                    )
-                    Text(option)
-                }
-            }
-        }
-        Text("Turnaround based on")
-    }
-    Column(
-        modifier = Modifier.weight(1f).fillMaxHeight(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        val timeString = TurnaroundTime(
-            myTimerViewModel,
-            myDeadlineViewModel,
-            selectedOption,
-            hikingTime,
-            timeToSunset.intValue,
-            timeToDeadline.intValue
-        )
-        Text(
-            text = timeString,
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Text(
-            text = "Turnaround time"
-        )
-    }
-}
-Spacer(modifier = Modifier.height(32.dp))*/
-
-/*AltitudeChange(
-    myPressureViewModel
-)
-Altitude(
-    myPressureViewModel,
-    myLocationViewModel,
-    seaLevelPressure.floatValue,
-    onAlertShownChanged = { alertShown.value = it} ,
-    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it }
-)
-AltitudeAlertDialog(
-    myPressureViewModel,
-    alertShown.value,
-    onSeaLevelPressureChanged = { seaLevelPressure.floatValue = it},
-    onAlertShownChanged = { alertShown.value = it}
-)*/
-/*Canvas(
-    modifier = Modifier
-        .size(200.dp)
-        .background(Color.Blue)
-){
-
-}*/
-
-/*val fusedLocationProviderClient: FusedLocationProviderClient by lazy {
-    LocationServices.getFusedLocationProviderClient(this)
-}
-@SuppressLint("MissingPermission")
-fusedLocationProviderClient.getCurrentLocation(
-    Priority.PRIORITY_HIGH_ACCURACY,
-    CancellationTokenSource().token
-).addOnSuccessListener { location ->
-    if (location != null) {
-        locationViewModel.location.value = location
-        val denominator = 1f - locationViewModel.location.value.altitude / 44330.77
-        pressureViewModel.seaLevelPressure.floatValue =
-            pressureViewModel.currentPressure.floatValue /
-                    denominator.pow(5.25588).toFloat()
     }
 }*/

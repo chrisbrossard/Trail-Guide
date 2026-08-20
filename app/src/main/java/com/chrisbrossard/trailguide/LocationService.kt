@@ -64,8 +64,8 @@ class LocationService: Service(), SensorEventListener {
         private val _trackingData = MutableStateFlow<List<ChartPoint>>(emptyList())
         val trackingData: StateFlow<List<ChartPoint>> = _trackingData.asStateFlow()
     }
-    private var seaLevelPressure = -1f
-    private var currentPressure = -1f
+    private var seaLevelPressure = 0f
+    private var currentPressure = 0f
 
     private var seaLevelPressureUpdated = false
     private var pressureSensor: Sensor? = null
@@ -78,9 +78,9 @@ class LocationService: Service(), SensorEventListener {
                 var deltaDistance = 0
                 //var distanceString = "* "
                 //locations.forEachIndexed { index, location ->
-                    //if (seaLevelPressure == -1f && currentPressure != -1f && index == 0) {
+                //if (seaLevelPressure == -1f && currentPressure != -1f && index == 0) {
                 for (location in locations) {
-                    if (!seaLevelPressureUpdated) {
+                    if (pressureSensor != null && !seaLevelPressureUpdated) {
                         val denominator = 1f - location.altitude / 44330.77
                         seaLevelPressure = (currentPressure / denominator.pow(5.25588)).toFloat()
                         seaLevelPressureUpdated = true
@@ -100,12 +100,15 @@ class LocationService: Service(), SensorEventListener {
                 //LocationRepository.emitSubDeltaDistances(distanceString)
                 //LocationRepository.emitUpdateCount(locations.size)
 
-                val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
+                var a = locations.last().altitude.toFloat()
+                if (pressureSensor != null) {
+                    a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
+                }
                 val newPoint = ChartPoint(
                     distance, //(Clock.System.now().epochSeconds - startTime).toFloat(),
-                        a
-                    )
-                _trackingData.update { currentList -> currentList + newPoint}
+                    a
+                )
+                _trackingData.update { currentList -> currentList + newPoint }
             }
         }
     }
@@ -124,17 +127,25 @@ class LocationService: Service(), SensorEventListener {
 
         when (intent?.action) {
             "START" -> {
+                sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+                pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
+                pressureSensor?.also { sensor ->
+                    sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+                }
+
                 seaLevelPressure = intent.getFloatExtra("sea_level_pressure",
-                    -1f)
+                    0f)
                 currentPressure = intent.getFloatExtra("current_pressure",
-                    -1f)
-                val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
-                if (_trackingData.value.isEmpty()) {
-                    val zeroPoint = ChartPoint(
-                        0f,
-                        a
-                    )
-                    _trackingData.update { currentList -> currentList + zeroPoint}
+                    0f)
+                if (pressureSensor != null) {
+                    val a = SensorManager.getAltitude(seaLevelPressure, currentPressure)
+                    if (_trackingData.value.isEmpty()) {
+                        val zeroPoint = ChartPoint(
+                            0f,
+                            a
+                        )
+                        _trackingData.update { currentList -> currentList + zeroPoint }
+                    }
                 }
 
                 val channel = NotificationChannel(
@@ -194,12 +205,6 @@ class LocationService: Service(), SensorEventListener {
                     locationCallback,
                     Looper.getMainLooper()
                 )
-
-                sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-                pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
-                pressureSensor?.also { sensor ->
-                    sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-                }
 
                 return START_STICKY
             }
