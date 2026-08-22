@@ -1,6 +1,7 @@
 package com.chrisbrossard.trailguide
 
 import android.location.Location
+import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -11,6 +12,14 @@ object LocationRepository {
     private val _locationHistory = mutableListOf<Location>()
     val locationHistory: List<Location>
         get() = _locationHistory
+
+    private var _distance = 0
+    fun addDistance(distance: Int) {
+        _distance += distance
+    }
+    fun getDistance(): Int {
+        return _distance
+    }
 
     private val _locationsFlow = MutableSharedFlow<List<Location>>(replay = 1)
     val locationsFlow = _locationsFlow.asSharedFlow()

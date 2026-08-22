@@ -58,8 +58,9 @@ dependencies {
     implementation(libs.vico.compose.glance)
     implementation(libs.androidx.fragment.ktx.v188)
     implementation(libs.maplibre.compose)
+    implementation(libs.androidx.datastore.preferences)
 
-        testImplementation(libs.junit)
+    testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
